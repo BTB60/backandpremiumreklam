@@ -1,19 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { WhatsAppChat } from "@/components/ui/WhatsAppChat";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
 
 export const metadata: Metadata = {
   title: "Premium Reklam - Reklam və Dekor Xidmətləri",
@@ -30,9 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="az" data-scroll-behavior="smooth">
-      <body
-        className={`${inter.variable} ${manrope.variable} antialiased font-sans`}
-      >
+      <body className="antialiased font-sans">
         {children}
         <WhatsAppChat />
       </body>

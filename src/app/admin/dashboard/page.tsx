@@ -44,7 +44,9 @@ import {
   Store,
   Wallet,
   Boxes,
-  Headphones
+  Headphones,
+  Menu,
+  ChevronLeft
 } from "lucide-react";
 
 interface EditingUser {
@@ -76,6 +78,7 @@ export default function AdminDashboardPage() {
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const currentUser = auth.getCurrentUser();
@@ -263,26 +266,53 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FB]">
       {/* Admin Header */}
-      <header className="bg-[#1F2937] text-white">
+      <header className="bg-[#1F2937] text-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 hover:bg-white/10 rounded-lg"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
               <Shield className="w-6 h-6 text-[#D90429]" />
               <span className="font-bold text-lg">Admin Panel</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-gray-400 text-sm">{user.fullName}</span>
+              <span className="text-gray-400 text-sm hidden sm:block">{user.fullName}</span>
               <Button variant="ghost" size="sm" onClick={handleLogout} icon={<LogOut className="w-4 h-4" />}>
-                Çıxış
+                <span className="hidden sm:inline">Çıxış</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex relative">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-64 bg-white min-h-screen border-r border-gray-200">
+        <aside className={`
+          fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white min-h-screen border-r border-gray-200
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}>
+          <div className="flex items-center justify-between p-4 lg:hidden">
+            <span className="font-bold text-lg">Menyu</span>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          </div>
           <nav className="p-4 space-y-2">
             {[
               { id: "dashboard", label: "Dashboard", icon: TrendingUp },
@@ -300,7 +330,10 @@ export default function AdminDashboardPage() {
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as any)}
+                onClick={() => {
+                  setActiveTab(item.id as any);
+                  setSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   activeTab === item.id
                     ? "bg-[#D90429] text-white"
@@ -308,19 +341,19 @@ export default function AdminDashboardPage() {
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label}
+                <span className="text-sm">{item.label}</span>
               </button>
             ))}
           </nav>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
           {activeTab === "dashboard" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <h1 className="text-2xl font-bold text-[#1F2937] mb-6">Dashboard</h1>
               
-              <div className="grid md:grid-cols-4 gap-6 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
                 <Card className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -560,7 +593,7 @@ export default function AdminDashboardPage() {
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D90429]"
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-[#6B7280] mb-1">Level</label>
                           <input
@@ -642,7 +675,7 @@ export default function AdminDashboardPage() {
                       <ShoppingBag className="w-5 h-5 text-[#D90429]" />
                       Statistika
                     </h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-[#6B7280] text-sm">Ümumi sifariş</p>
                         <p className="text-2xl font-bold text-[#1F2937]">{selectedUser.totalOrders}</p>
@@ -854,7 +887,7 @@ function AdminOrdersHistory({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       {/* Header Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
         {[
           { label: "Hamısı", value: allOrders.length, color: "bg-gray-100" },
           { label: "Gözləyir", value: getStatusCount("pending"), color: "bg-amber-100" },

@@ -560,9 +560,51 @@ export const orders = {
     const orders = getOrders();
     orders.push(newOrder);
     saveOrders(orders);
+
+    // Update user XP and level
+    const user = auth.getById(order.userId);
+    if (user) {
+      const userOrders = this.getByUserId(order.userId);
+      const totalXP = userOrders.reduce((sum, o) => sum + Math.floor(o.finalTotal), 0);
+      const newLevel = calculateLevelFromXP(totalXP);
+      
+      if (newLevel > user.level) {
+        auth.update(user.id, { 
+          level: newLevel,
+          totalOrders: userOrders.length 
+        });
+        
+        // Create level up notification
+        notifications.create({
+          userId: user.id,
+          title: "Səviyyə artışı! 🎉",
+          message: `Təbriklər! Siz Level ${newLevel}-ə çatdınız!`,
+          type: "system",
+        });
+      } else {
+        auth.update(user.id, { totalOrders: userOrders.length });
+      }
+    }
+
     return newOrder;
   },
 };
+
+// Level calculation helper
+function calculateLevelFromXP(xp: number): number {
+  const levels = [
+    { level: 100, xp: 1500 },
+    { level: 75, xp: 1000 },
+    { level: 50, xp: 600 },
+    { level: 25, xp: 300 },
+    { level: 10, xp: 100 },
+    { level: 1, xp: 0 },
+  ];
+  for (const l of levels) {
+    if (xp >= l.xp) return l.level;
+  }
+  return 1;
+}
 
 export const notifications = {
   getAll(): Notification[] {
@@ -1875,5 +1917,25 @@ export const auth = {
 
   getAllUsers(): User[] {
     return getUsers();
+  },
+
+  getById(id: string): User | undefined {
+    return getUsers().find(u => u.id === id);
+  },
+
+  update(id: string, updates: Partial<User>): User | null {
+    const users = getUsers();
+    const index = users.findIndex(u => u.id === id);
+    if (index === -1) return null;
+    users[index] = { ...users[index], ...updates };
+    saveUsers(users);
+
+    // Update current user in localStorage if it's the same user
+    const currentUser = this.getCurrentUser();
+    if (currentUser && currentUser.id === id) {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(users[index]));
+    }
+
+    return users[index];
   },
 };

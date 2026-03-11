@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { 
   Play, 
-  Clock, 
   Calculator, 
   Shield, 
   TrendingUp,
@@ -17,9 +16,11 @@ import {
   Star,
   ArrowRight,
   Smartphone,
-  Receipt
+  Receipt,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // Before/After Comparison Component
 function BeforeAfterCard() {
@@ -92,82 +93,99 @@ function BeforeAfterCard() {
   );
 }
 
-// Video Demo Section
-function VideoDemo() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [activeVideo, setActiveVideo] = useState(0);
+// Image Carousel Section
+function ImageCarousel() {
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  const videos = [
+  const slides = [
     {
-      src: "/Create_a_short_promotional_video_for_an_advertising_company.____Scene_1___A_graphic_designer_working_seed3858181332.mp4",
-      title: "Sürətli Baxış",
-      duration: "60 saniyə"
+      title: "Premium Reklam",
+      description: "Professional reklam və dekor xidmətləri",
+      image: "/ChatGPT Image 28 Ara 2025 18_45_45.png"
     },
     {
-      src: "/Create_a_short_promotional_video_for_an_advertising_company.____Scene_1___A_graphic_designer_working_seed4096509074.mp4",
-      title: "Dizayn Prosesi",
-      duration: "45 saniyə"
+      title: "Sürətli Xidmət",
+      description: "24 saat ərzində çatdırılma",
+      image: "/ChatGPT Image 28 Ara 2025 19_03_41.png"
+    },
+    {
+      title: "Keyfiyyət Zəmanəti",
+      description: "100% müştəri məmnuniyyəti",
+      image: "/ChatGPT Image 28 Ara 2025 19_13_34.png"
+    },
+    {
+      title: "Uyğun Qiymət",
+      description: "Sərfəli və şəffaf qiymətlər",
+      image: "/ChatGPT Image 28 Ara 2025 19_28_42.png"
     }
   ];
 
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  // Auto-play
+  useEffect(() => {
+    const interval = setInterval(nextSlide, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="relative">
-      <div className="aspect-video rounded-2xl overflow-hidden bg-gray-900 relative">
-        {!isPlaying ? (
-          /* Thumbnail */
-          <div className="absolute inset-0 bg-gradient-to-br from-[#D90429]/20 to-[#EF476F]/20 flex items-center justify-center">
-            <button
-              onClick={() => setIsPlaying(true)}
-              className="w-20 h-20 rounded-full bg-[#D90429] text-white flex items-center justify-center hover:scale-110 transition-transform"
-            >
-              <Play className="w-8 h-8 ml-1" />
-            </button>
-          </div>
-        ) : (
-          /* Video Player */
-          <video
-            key={activeVideo}
-            className="w-full h-full object-cover"
-            controls
-            autoPlay
-            muted
-            loop
-          >
-            <source src={videos[activeVideo].src} type="video/mp4" />
-            Brauzeriniz video dəstəkləmir.
-          </video>
-        )}
-      </div>
-      
-      {/* Video Selector */}
-      {isPlaying && (
-        <div className="flex justify-center gap-3 mt-4">
-          {videos.map((video, index) => (
-            <button
+      <div className="overflow-hidden rounded-2xl">
+        <div
+          className="flex transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+        >
+          {slides.map((slide, index) => (
+            <div
               key={index}
-              onClick={() => setActiveVideo(index)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeVideo === index
-                  ? "bg-[#D90429] text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              className="w-full flex-shrink-0 aspect-[16/9] relative"
             >
-              {video.title}
-            </button>
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <h3 className="text-2xl md:text-3xl font-bold mb-2">{slide.title}</h3>
+                <p className="text-white/80">{slide.description}</p>
+              </div>
+            </div>
           ))}
         </div>
-      )}
-      
-      {/* Video Stats */}
-      <div className="flex items-center justify-center gap-6 mt-4 text-sm text-[#6B7280]">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4" />
-          <span>{videos[activeVideo].duration}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Play className="w-4 h-4" />
-          <span>10K+ baxış</span>
-        </div>
+      </div>
+
+      {/* Navigation Arrows */}
+      <button
+        onClick={prevSlide}
+        className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+      >
+        <ChevronLeft className="w-5 h-5 text-gray-700" />
+      </button>
+      <button
+        onClick={nextSlide}
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
+      >
+        <ChevronRight className="w-5 h-5 text-gray-700" />
+      </button>
+
+      {/* Dots */}
+      <div className="flex justify-center gap-2 mt-4">
+        {slides.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentSlide(index)}
+            className={`w-2 h-2 rounded-full transition-all ${
+              currentSlide === index ? "w-6 bg-[#D90429]" : "bg-gray-300"
+            }`}
+          />
+        ))}
       </div>
     </div>
   );
@@ -281,8 +299,8 @@ export function ViralLanding() {
         </div>
       </section>
 
-      {/* Video Demo */}
-      <VideoDemo />
+      {/* Image Carousel */}
+      <ImageCarousel />
 
       {/* Quick Features */}
       <QuickFeatures />
