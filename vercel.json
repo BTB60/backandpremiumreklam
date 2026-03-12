@@ -36,17 +36,6 @@
       ],
       "destination": "https://premiumreklambaku.shop/:path*",
       "permanent": true
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "scheme",
-          "value": "http"
-        }
-      ],
-      "destination": "https://premiumreklambaku.shop/:path*",
-      "permanent": true
     }
   ]
 }
