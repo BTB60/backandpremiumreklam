@@ -40,4 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# Gradle
+backend/.gradle/
+backend/build/
+
+# VS Code
+.vscode/
