@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "../db";
+import { neon } from "@neondatabase/serverless";
+
+const sql = neon(process.env.DATABASE_URL || "");
 
 // POST - Login
 export async function POST(request: NextRequest) {
@@ -8,21 +10,22 @@ export async function POST(request: NextRequest) {
     const { username, password } = body;
 
     // Find user
-    const user = db.users.find(
-      u => u.username === username && u.password === password
-    );
+    const result = await sql`
+      SELECT id, full_name, username, phone, email, role, level, total_orders, bonus_points, created_at
+      FROM users 
+      WHERE username = ${username} AND password_hash = ${password}
+    `;
 
-    if (!user) {
+    if (!result || result.length === 0) {
       return NextResponse.json(
         { error: "İstifadəçi adı və ya şifrə yanlışdır" },
         { status: 401 }
       );
     }
 
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = user;
-    return NextResponse.json({ user: userWithoutPassword });
+    return NextResponse.json({ user: result[0] });
   } catch (error) {
+    console.error("Login error:", error);
     return NextResponse.json(
       { error: "Server xətası" },
       { status: 500 }
