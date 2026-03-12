@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { User, Lock, ArrowRight, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { authApi } from "@/lib/authApi";
 
 function LoginForm() {
   const router = useRouter();
@@ -26,11 +26,8 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      // Login via API
-      const user = await api.login(username, password);
-
-      // Save user to localStorage for session
-      localStorage.setItem("currentUser", JSON.stringify(user));
+      // Login via localStorage-based auth
+      const user = await authApi.login(username, password);
 
       const role = user?.role?.toUpperCase();
 

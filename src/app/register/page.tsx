@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Phone, Lock, User, ArrowRight, Building2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { authApi } from "@/lib/authApi";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -38,8 +38,8 @@ export default function RegisterPage() {
         throw new Error("Şifrə ən azı 6 simvol olmalıdır");
       }
 
-      // Register via API
-      const user = await api.register({
+      // Register via localStorage-based auth
+      const user = await authApi.register({
         fullName: formData.fullName,
         username: formData.username,
         phone: formData.phone,
