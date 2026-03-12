@@ -58,7 +58,7 @@ if (!global.__db_users) {
       fullName: "Admin",
       username: "admin",
       phone: "+994507988177",
-      email: "admin@premiumreklam.az",
+      email: "premiumreklam@bk.ru",
       password: "admin123", // In production, hash this!
       role: "ADMIN",
       level: 100,
