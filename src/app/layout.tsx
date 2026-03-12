@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { WhatsAppChat } from "@/components/ui/WhatsAppChat";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Premium Reklam - Reklam və Dekor Xidmətləri",
@@ -20,6 +21,7 @@ export default function RootLayout({
       <body className="antialiased font-sans">
         {children}
         <WhatsAppChat />
+        <SpeedInsights />
       </body>
     </html>
   );
