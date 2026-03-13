@@ -1,4 +1,4 @@
-// Client-side Auth API - uses localStorage only (serverless stateless fix)
+// Client-side Auth API - uses API routes with Neon PostgreSQL
 
 export interface User {
   id: number;
@@ -13,7 +13,7 @@ export interface User {
   created_at: string;
 }
 
-const USERS_KEY = "premiumreklam_users";
+const API_BASE = "/api";
 const CURRENT_USER_KEY = "currentUser";
 
 // Safe localStorage access
@@ -32,37 +32,6 @@ const storage = {
   },
 };
 
-// Get users from localStorage
-function getLocalUsers(): any[] {
-  const stored = storage.get(USERS_KEY);
-  if (!stored) {
-    // Initialize with default admin
-    const defaultUsers = [
-      {
-        id: 1,
-        full_name: "Admin",
-        username: "admin",
-        phone: "+994507988177",
-        email: "premiumreklam@bk.ru",
-        password_hash: "admin123",
-        role: "ADMIN",
-        level: 100,
-        total_orders: 0,
-        bonus_points: 0,
-        created_at: new Date().toISOString(),
-      },
-    ];
-    storage.set(USERS_KEY, JSON.stringify(defaultUsers));
-    return defaultUsers;
-  }
-  return JSON.parse(stored);
-}
-
-// Save users to localStorage
-function saveLocalUsers(users: any[]) {
-  storage.set(USERS_KEY, JSON.stringify(users));
-}
-
 export const authApi = {
   // Register new user
   async register(userData: {
@@ -71,54 +40,46 @@ export const authApi = {
     phone?: string;
     password: string;
   }): Promise<User> {
-    const users = getLocalUsers();
-    
-    // Check if username exists
-    if (users.find((u: any) => u.username === userData.username)) {
-      throw new Error("Bu istifadəçi adı artıq mövcuddur");
+    const response = await fetch(`${API_BASE}/users`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Qeydiyyat xətası");
     }
 
-    // Create new user
-    const newUser = {
-      id: Date.now(),
-      full_name: userData.fullName,
-      username: userData.username,
-      phone: userData.phone || "",
-      email: "",
-      password_hash: userData.password,
-      role: "DECORATOR",
-      level: 1,
-      total_orders: 0,
-      bonus_points: 0,
-      created_at: new Date().toISOString(),
-    };
+    if (data.user) {
+      storage.set(CURRENT_USER_KEY, JSON.stringify(data.user));
+      return data.user;
+    }
 
-    users.push(newUser);
-    saveLocalUsers(users);
-
-    // Save current user
-    const { password_hash, ...userWithoutPassword } = newUser;
-    storage.set(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
-    
-    return userWithoutPassword as User;
+    throw new Error("Qeydiyyat xətası");
   },
 
   // Login
   async login(username: string, password: string): Promise<User> {
-    const users = getLocalUsers();
-    
-    const user = users.find(
-      (u: any) => u.username === username && u.password_hash === password
-    );
+    const response = await fetch(`${API_BASE}/auth`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-    if (!user) {
-      throw new Error("İstifadəçi adı və ya şifrə yanlışdır");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Giriş xətası");
     }
 
-    const { password_hash, ...userWithoutPassword } = user;
-    storage.set(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
-    
-    return userWithoutPassword as User;
+    if (data.user) {
+      storage.set(CURRENT_USER_KEY, JSON.stringify(data.user));
+      return data.user;
+    }
+
+    throw new Error("Giriş xətası");
   },
 
   // Get current user
@@ -134,8 +95,9 @@ export const authApi = {
 
   // Get all users (for admin)
   async getAllUsers(): Promise<User[]> {
-    const users = getLocalUsers();
-    return users.map(({ password_hash, ...user }: any) => user as User);
+    const response = await fetch(`${API_BASE}/users`);
+    const data = await response.json();
+    return data.users || [];
   },
 };
 
