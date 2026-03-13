@@ -1,17 +1,38 @@
 import { neon } from "@neondatabase/serverless";
 
-// Initialize Neon client - use Vercel Neon integration URL
-const DATABASE_URL = process.env.DATABASE_URL || 
-  process.env.POSTGRES_URL || 
-  process.env.premiumreklambaku_POSTGRES_URL ||
-  process.env.premiumreklambaku_DATABASE_URL ||
-  "";
+// Get database URL from environment
+function getDatabaseUrl(): string {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.premiumreklambaku_POSTGRES_URL ||
+    process.env.premiumreklambaku_DATABASE_URL ||
+    ""
+  );
+}
 
-const sql = neon(DATABASE_URL);
+// Lazy initialization - only create client when needed
+let sqlInstance: ReturnType<typeof neon> | null = null;
+
+export function getSql() {
+  if (!sqlInstance) {
+    const dbUrl = getDatabaseUrl();
+    if (!dbUrl) {
+      throw new Error("DATABASE_URL not configured");
+    }
+    sqlInstance = neon(dbUrl);
+  }
+  return sqlInstance;
+}
+
+// Type for query results
+type QueryResult = any[] | Record<string, any>[];
 
 // Initialize database schema
 export async function initDB() {
   try {
+    const sql = getSql();
+
     // Create users table
     await sql`
       CREATE TABLE IF NOT EXISTS users (
@@ -44,8 +65,8 @@ export async function initDB() {
     `;
 
     // Create default admin if not exists
-    const adminCheck = await sql`SELECT * FROM users WHERE username = 'admin'`;
-    if (adminCheck.length === 0) {
+    const adminCheck = await sql`SELECT * FROM users WHERE username = 'admin'` as QueryResult;
+    if (Array.isArray(adminCheck) && adminCheck.length === 0) {
       await sql`
         INSERT INTO users (full_name, username, phone, email, password_hash, role, level)
         VALUES ('Admin', 'admin', '+994507988177', 'premiumreklam@bk.ru', 'admin123', 'ADMIN', 100)
@@ -55,7 +76,14 @@ export async function initDB() {
     console.log("Database initialized successfully");
   } catch (error) {
     console.error("Database initialization error:", error);
+    throw error;
   }
 }
 
-export { sql };
+// Export sql for backward compatibility
+export const sql = new Proxy({} as ReturnType<typeof neon>, {
+  get: (target, prop) => {
+    const sql = getSql();
+    return (sql as any)[prop];
+  },
+});
