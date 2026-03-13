@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "premium-reklam",
   "framework": "nextjs",
   "regions": ["fra1"],
   "env": {
