@@ -3,8 +3,10 @@
   "framework": "nextjs",
   "regions": ["fra1"],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://premium-reklam.vercel.app/api",
-    "NEXT_PUBLIC_URL": "https://premium-reklam.vercel.app"
+    "NEXT_PUBLIC_URL": "https://www.premiumreklam.shop",
+    "NEXTAUTH_URL": "https://www.premiumreklam.shop",
+    "NEXT_PUBLIC_SITE_URL": "https://www.premiumreklam.shop",
+    "NEXT_PUBLIC_API_URL": "/api"
   },
   "headers": [
     {
