@@ -12,6 +12,29 @@ function getDatabaseUrl(): string {
   );
 }
 
+// Initialize database
+async function initDB(sql: any) {
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        full_name VARCHAR(255) NOT NULL,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        phone VARCHAR(20),
+        email VARCHAR(255),
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT 'DECORATOR',
+        level INTEGER DEFAULT 1,
+        total_orders INTEGER DEFAULT 0,
+        bonus_points INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+  } catch (error) {
+    console.error("DB init error:", error);
+  }
+}
+
 // POST - Login
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +47,8 @@ export async function POST(request: NextRequest) {
     }
 
     const sql = neon(dbUrl);
+    await initDB(sql); // Initialize database
+    
     const body = await request.json();
     const { username, password } = body;
 
