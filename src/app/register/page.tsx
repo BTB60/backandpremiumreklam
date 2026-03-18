@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
-import { Phone, Lock, User, ArrowRight, Building2 } from "lucide-react";
+import { Phone, Lock, User, ArrowRight, Building2, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/authApi";
@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     fullName: "",
     username: "",
+    email: "",
     phone: "",
     companyName: "",
     password: "",
@@ -38,10 +39,15 @@ export default function RegisterPage() {
         throw new Error("Şifrə ən azı 6 simvol olmalıdır");
       }
 
-      // Register via localStorage-based auth
+      if (!formData.email) {
+        throw new Error("Email daxil edin");
+      }
+
+      // Register via API
       const user = await authApi.register({
         fullName: formData.fullName,
         username: formData.username,
+        email: formData.email,
         phone: formData.phone,
         password: formData.password,
       });
@@ -92,6 +98,16 @@ export default function RegisterPage() {
               value={formData.username}
               onChange={(value) => setFormData({ ...formData, username: value })}
               icon={<User className="w-5 h-5" />}
+              required
+            />
+
+            <Input
+              label="Email"
+              type="email"
+              placeholder="email@domain.com"
+              value={formData.email}
+              onChange={(value) => setFormData({ ...formData, email: value })}
+              icon={<Mail className="w-5 h-5" />}
               required
             />
 
