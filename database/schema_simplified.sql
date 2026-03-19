@@ -1,15 +1,12 @@
 -- DecorApp Simplified Database Schema
 -- PostgreSQL
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- ============================================
 -- 1. USERS
 -- ============================================
 
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     full_name VARCHAR(255) NOT NULL,
     phone VARCHAR(20) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE,
@@ -39,7 +36,7 @@ CREATE TABLE users (
     
     -- Referral
     referral_code VARCHAR(20) UNIQUE,
-    referred_by UUID REFERENCES users(id),
+    referred_by BIGINT REFERENCES users(id),
     
     -- Commission
     commission_rate DECIMAL(5, 2) DEFAULT 15.00,
@@ -53,7 +50,7 @@ CREATE TABLE users (
 -- ============================================
 
 CREATE TABLE categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
     sort_order INTEGER DEFAULT 0,
@@ -66,10 +63,10 @@ CREATE TABLE categories (
 -- ============================================
 
 CREATE TABLE products (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
-    category_id UUID NOT NULL REFERENCES categories(id),
+    category_id BIGINT NOT NULL REFERENCES categories(id),
     
     -- Pricing
     unit_type VARCHAR(50) DEFAULT 'm2', -- m2, linear_m, piece
@@ -89,9 +86,9 @@ CREATE TABLE products (
 -- ============================================
 
 CREATE TABLE orders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     order_number VARCHAR(50) UNIQUE NOT NULL,
-    user_id UUID NOT NULL REFERENCES users(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
     
     -- Status: pending, approved, design, printing, production, ready, delivering, completed, cancelled
     status VARCHAR(50) DEFAULT 'pending',
@@ -123,9 +120,9 @@ CREATE TABLE orders (
 -- ============================================
 
 CREATE TABLE order_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES products(id),
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id BIGINT NOT NULL REFERENCES products(id),
     
     -- Measurements
     width DECIMAL(10, 2) NOT NULL,
@@ -148,13 +145,13 @@ CREATE TABLE order_items (
 -- ============================================
 
 CREATE TABLE order_files (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL,
     file_url TEXT NOT NULL,
     file_type VARCHAR(100),
     file_size INTEGER,
-    uploaded_by UUID REFERENCES users(id),
+    uploaded_by BIGINT REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -163,9 +160,9 @@ CREATE TABLE order_files (
 -- ============================================
 
 CREATE TABLE payments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID REFERENCES orders(id),
-    user_id UUID NOT NULL REFERENCES users(id),
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT REFERENCES orders(id),
+    user_id BIGINT NOT NULL REFERENCES users(id),
     
     amount DECIMAL(12, 2) NOT NULL,
     method VARCHAR(50) NOT NULL, -- cash, card, transfer, bonus
@@ -174,7 +171,7 @@ CREATE TABLE payments (
     receipt_url TEXT,
     
     status VARCHAR(50) DEFAULT 'pending', -- pending, completed, failed
-    approved_by UUID REFERENCES users(id),
+    approved_by BIGINT REFERENCES users(id),
     approved_at TIMESTAMP,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -185,9 +182,9 @@ CREATE TABLE payments (
 -- ============================================
 
 CREATE TABLE debts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    order_id UUID REFERENCES orders(id),
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    order_id BIGINT REFERENCES orders(id),
     
     amount DECIMAL(12, 2) NOT NULL,
     paid_amount DECIMAL(12, 2) DEFAULT 0,
@@ -206,8 +203,8 @@ CREATE TABLE debts (
 -- ============================================
 
 CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     type VARCHAR(50) NOT NULL, -- order_status, payment, bonus, system
     title VARCHAR(255) NOT NULL,
@@ -223,9 +220,9 @@ CREATE TABLE notifications (
 -- ============================================
 
 CREATE TABLE referrals (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    referrer_id UUID NOT NULL REFERENCES users(id),
-    referred_id UUID REFERENCES users(id),
+    id BIGSERIAL PRIMARY KEY,
+    referrer_id BIGINT NOT NULL REFERENCES users(id),
+    referred_id BIGINT REFERENCES users(id),
     referral_code VARCHAR(20) NOT NULL,
     
     status VARCHAR(50) DEFAULT 'pending', -- pending, registered, first_order
@@ -241,8 +238,8 @@ CREATE TABLE referrals (
 -- ============================================
 
 CREATE TABLE bonuses (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id),
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
     
     amount DECIMAL(12, 2) NOT NULL,
     type VARCHAR(50) NOT NULL, -- referral, loyalty, promotion
@@ -250,7 +247,7 @@ CREATE TABLE bonuses (
     
     is_used BOOLEAN DEFAULT FALSE,
     used_at TIMESTAMP,
-    used_in_order UUID REFERENCES orders(id),
+    used_in_order BIGINT REFERENCES orders(id),
     
     expires_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -327,11 +324,11 @@ CREATE TRIGGER set_order_number BEFORE INSERT ON orders
 -- ============================================
 
 CREATE TABLE activity_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id),
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(id),
     action VARCHAR(100) NOT NULL,
     entity_type VARCHAR(100),
-    entity_id UUID,
+    entity_id BIGINT,
     description TEXT,
     ip_address INET,
     user_agent TEXT,
@@ -343,7 +340,7 @@ CREATE TABLE activity_logs (
 -- ============================================
 
 CREATE TABLE achievements (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     code VARCHAR(50) UNIQUE NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -358,9 +355,9 @@ CREATE TABLE achievements (
 -- ============================================
 
 CREATE TABLE user_achievements (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    achievement_id UUID NOT NULL REFERENCES achievements(id),
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    achievement_id BIGINT NOT NULL REFERENCES achievements(id),
     earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, achievement_id)
 );
@@ -370,11 +367,11 @@ CREATE TABLE user_achievements (
 -- ============================================
 
 CREATE TABLE tasks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    assigned_to UUID NOT NULL REFERENCES users(id),
-    assigned_by UUID REFERENCES users(id),
+    assigned_to BIGINT NOT NULL REFERENCES users(id),
+    assigned_by BIGINT REFERENCES users(id),
     priority VARCHAR(50) DEFAULT 'medium', -- low, medium, high, urgent
     status VARCHAR(50) DEFAULT 'pending', -- pending, in_progress, completed, cancelled
     due_date TIMESTAMP,
@@ -387,7 +384,7 @@ CREATE TABLE tasks (
 -- ============================================
 
 CREATE TABLE discounts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     code VARCHAR(50) UNIQUE NOT NULL,
     type VARCHAR(50) NOT NULL, -- percentage, fixed
@@ -404,9 +401,9 @@ CREATE TABLE discounts (
 -- ============================================
 
 CREATE TABLE referrals (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    referrer_user_id UUID NOT NULL REFERENCES users(id),
-    referred_user_id UUID REFERENCES users(id),
+    id BIGSERIAL PRIMARY KEY,
+    referrer_user_id BIGINT NOT NULL REFERENCES users(id),
+    referred_user_id BIGINT REFERENCES users(id),
     bonus_amount DECIMAL(10, 2) DEFAULT 25,
     status VARCHAR(50) DEFAULT 'pending', -- pending, registered, completed
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -417,8 +414,8 @@ CREATE TABLE referrals (
 -- ============================================
 
 CREATE TABLE invoices (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID NOT NULL REFERENCES orders(id),
+    id BIGSERIAL PRIMARY KEY,
+    order_id BIGINT NOT NULL REFERENCES orders(id),
     invoice_number VARCHAR(50) UNIQUE NOT NULL,
     pdf_url TEXT,
     subtotal DECIMAL(12, 2) NOT NULL,
@@ -432,7 +429,7 @@ CREATE TABLE invoices (
 -- ============================================
 
 CREATE TABLE settings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
     key VARCHAR(100) UNIQUE NOT NULL,
     value TEXT,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

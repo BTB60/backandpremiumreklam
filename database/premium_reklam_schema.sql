@@ -4,9 +4,6 @@
 -- Generated for PremiumReklam Project
 -- ============================================
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- ============================================
 -- 1. USERS TABLE
 -- ============================================
