@@ -52,19 +52,18 @@ export function FacebookPixel() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // Check if already initialized
     const existingScript = window.document.getElementById("fb-pixel-script");
-    if (existingScript) return;
+    if (existingScript || (window as any).fbq) return;
 
     // Initialize fbq
     const win = window as any;
-    win.fbq = win.fbq || function fbqHandler() {
-      const args = Array.from(arguments);
-      (win.fbq as any).q = (win.fbq as any).q || [];
-      (win.fbq as any).q.push(args);
+    win.fbq = function fbqHandler(...args: any[]) {
+      win.fbq.q = win.fbq.q || [];
+      win.fbq.q.push(args);
     };
-    (win.fbq as any).q = [];
-    (win.fbq as any).t = new Date().getTime();
-    (win.fbq as any).o = function() { return Array.from(arguments); };
+    win.fbq.q = [];
+    win.fbq.loaded = true;
 
     win.fbq("init", FB_PIXEL_ID);
     win.fbq("track", "PageView");
@@ -75,12 +74,6 @@ export function FacebookPixel() {
     script.async = true;
     script.src = "https://connect.facebook.net/en_US/fbevents.js";
     window.document.head.appendChild(script);
-
-    return () => {
-      if (window.document.getElementById("fb-pixel-script")) {
-        window.document.head.removeChild(script);
-      }
-    };
   }, []);
 
   return null;
