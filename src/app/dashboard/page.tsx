@@ -20,7 +20,8 @@ import {
   CheckCircle,
   User,
   ShoppingBag,
-  RefreshCw
+  RefreshCw,
+  Store
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -187,10 +188,11 @@ export default function DashboardPage() {
             { id: "home", label: "Ana Səhifə", icon: User },
             { id: "products", label: "Məhsullar", icon: ShoppingBag },
             { id: "orders", label: "Sifarişlərim", icon: Package },
+            { id: "store", label: "Mağazam", icon: Store, href: "/dashboard/store" },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => tab.href ? router.push(tab.href) : setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-5 py-4 border-b-2 whitespace-nowrap text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? "border-[#D90429] text-[#D90429]"

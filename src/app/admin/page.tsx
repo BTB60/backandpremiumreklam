@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { orders, notifications, settings, tasks, products, finance, inventory, workerTasks, playNotificationSound, type User, type Order, type Notification, type SystemSettings, type Task, type Product, type ProductCategory, type FinancialTransaction, type Material, type WorkerTask } from "@/lib/db";
+import { orders, notifications, settings, tasks, products, finance, inventory, workerTasks, playNotificationSound, storeRequests, vendorStores, type User, type Order, type Notification, type SystemSettings, type Task, type Product, type ProductCategory, type FinancialTransaction, type Material, type WorkerTask, type StoreRequest } from "@/lib/db";
 import { authApi, orderApi, productApi, type Order as ApiOrder } from "@/lib/authApi";
 import { getOrderTotal, formatAZN } from "@/lib/orderHelpers";
 import { Button } from "@/components/ui/Button";
@@ -48,7 +48,9 @@ import {
   Boxes,
   Headphones,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  XCircle,
+  MapPin
 } from "lucide-react";
 
 interface EditingUser {
@@ -101,7 +103,9 @@ export default function AdminDashboardPage() {
   const [allTransactions, setAllTransactions] = useState<FinancialTransaction[]>([]);
   const [allMaterials, setAllMaterials] = useState<Material[]>([]);
   const [allWorkerTasks, setAllWorkerTasks] = useState<WorkerTask[]>([]);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "orders" | "notifications" | "analytics" | "products" | "finance" | "inventory" | "workerTasks" | "support" | "settings" | "tasks" | "userDetail">("dashboard");
+  const [allStoreRequests, setAllStoreRequests] = useState<StoreRequest[]>([]);
+  const [allVendorStores, setAllVendorStores] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "orders" | "notifications" | "analytics" | "products" | "finance" | "inventory" | "workerTasks" | "support" | "settings" | "tasks" | "userDetail" | "vendors">("dashboard");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -158,6 +162,8 @@ function findOrderUser(order: any, allUsers: any[]) {
       setAllTransactions(finance.getAll());
       setAllMaterials(inventory.getAll());
       setAllWorkerTasks(workerTasks.getAll());
+      setAllStoreRequests(storeRequests.getAll());
+      setAllVendorStores(vendorStores.getAllIncludingInactive());
     } catch (error) {
       console.error("Load data error:", error);
     }
@@ -367,20 +373,7 @@ function findOrderUser(order: any, allUsers: any[]) {
             </button>
           </div>
           <nav className="p-4 space-y-2">
-            {[
-              { id: "dashboard", label: "Dashboard", icon: TrendingUp },
-              { id: "users", label: "İstifadəçilər", icon: Users },
-              { id: "orders", label: "Sifarişlər", icon: Package },
-              { id: "notifications", label: "Bildirişlər", icon: Bell },
-              { id: "analytics", label: "Analytics", icon: BarChart3 },
-              { id: "products", label: "Məhsullar", icon: Store },
-              { id: "finance", label: "Maliyyə", icon: Wallet },
-              { id: "inventory", label: "Anbar", icon: Boxes },
-              { id: "workerTasks", label: "İşçi Tapşırıqları", icon: ClipboardList },
-              { id: "support", label: "Dəstək", icon: Headphones },
-              { id: "tasks", label: "Tapşırıqlar", icon: CheckSquare },
-              { id: "settings", label: "Sistem Ayarları", icon: Settings },
-            ].map((item) => (
+            {[              { id: "dashboard", label: "Dashboard", icon: TrendingUp },              { id: "users", label: "İstifadəçilər", icon: Users },              { id: "orders", label: "Sifarişlər", icon: Package },              { id: "vendors", label: "Mağazalar", icon: Store },              { id: "notifications", label: "Bildirişlər", icon: Bell },              { id: "analytics", label: "Analytics", icon: BarChart3 },              { id: "products", label: "Məhsullar", icon: Store },              { id: "finance", label: "Maliyyə", icon: Wallet },              { id: "inventory", label: "Anbar", icon: Boxes },              { id: "workerTasks", label: "İşçi Tapşırıqları", icon: ClipboardList },              { id: "support", label: "Dəstək", icon: Headphones },              { id: "tasks", label: "Tapşırıqlar", icon: CheckSquare },              { id: "settings", label: "Sistem Ayarları", icon: Settings },            ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -788,6 +781,16 @@ function findOrderUser(order: any, allUsers: any[]) {
             />
           )}
 
+          {activeTab === "vendors" && (
+            <VendorManagement 
+              allStoreRequests={allStoreRequests}
+              allVendorStores={allVendorStores}
+              allUsers={allUsers}
+              onRefresh={loadData}
+              currentUserId={user?.id}
+            />
+          )}
+
           {activeTab === "notifications" && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <div className="flex items-center justify-between mb-6">
@@ -885,6 +888,340 @@ function findOrderUser(order: any, allUsers: any[]) {
         </main>
       </div>
     </div>
+  );
+}
+
+// Vendor Management Component
+function VendorManagement({
+  allStoreRequests,
+  allVendorStores,
+  allUsers,
+  onRefresh,
+  currentUserId
+}: {
+  allStoreRequests: any[];
+  allVendorStores: any[];
+  allUsers: any[];
+  onRefresh: () => void;
+  currentUserId?: string;
+}) {
+  const [activeSubTab, setActiveSubTab] = useState<"requests" | "stores">("requests");
+  const [showRejectModal, setShowRejectModal] = useState<{ show: boolean; requestId: string }>({ show: false, requestId: "" });
+  const [rejectReason, setRejectReason] = useState("");
+
+  const pendingRequests = allStoreRequests.filter(r => r.status === "pending");
+  const processedRequests = allStoreRequests.filter(r => r.status !== "pending");
+
+  const handleApprove = (requestId: string) => {
+    if (confirm("Bu mağaza müraciətini təsdiqləmək istədiyinizə əminsiniz?")) {
+      try {
+        const result = storeRequests.approve(requestId, currentUserId || "admin");
+        if (result) {
+          alert("Mağaza uğurla təsdiqləndi!");
+          onRefresh();
+        } else {
+          alert("Xəta: Müraciət tapılmadı");
+        }
+      } catch (error) {
+        console.error("Approve error:", error);
+        alert("Xəta baş verdi: " + (error as Error).message);
+      }
+    }
+  };
+
+  const handleReject = () => {
+    if (!showRejectModal.requestId) return;
+    storeRequests.reject(showRejectModal.requestId, currentUserId || "admin", rejectReason);
+    setShowRejectModal({ show: false, requestId: "" });
+    setRejectReason("");
+    onRefresh();
+  };
+
+  const getUserName = (vendorId: string) => {
+    const user = allUsers.find(u => u.id === vendorId);
+    return user?.fullName || "Naməlum";
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-[#1F2937]">Mağaza İdarəetməsi</h1>
+        <div className="flex bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setActiveSubTab("requests")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+              activeSubTab === "requests"
+                ? "bg-white text-[#D90429] shadow"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <Store className="w-4 h-4" />
+            Müraciətlər
+            {pendingRequests.length > 0 && (
+              <span className="bg-[#D90429] text-white text-xs px-2 py-0.5 rounded-full">
+                {pendingRequests.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveSubTab("stores")}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeSubTab === "stores"
+                ? "bg-white text-[#D90429] shadow"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Mağazalar ({allVendorStores.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Store Requests Tab */}
+      {activeSubTab === "requests" && (
+        <>
+          {/* Pending Requests */}
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-500" />
+              Gözləyən Müraciətlər ({pendingRequests.length})
+            </h2>
+            
+            {pendingRequests.length === 0 ? (
+              <Card className="p-12 text-center">
+                <Store className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-[#6B7280]">Gözləyən mağaza müraciəti yoxdur</p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {pendingRequests.map(request => (
+                  <Card key={request.id} className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-xl font-bold text-[#1F2937]">{request.name}</h3>
+                          <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                            Gözləyir
+                          </span>
+                        </div>
+                        <p className="text-[#6B7280] mb-4">{request.description}</p>
+                        
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                          <div className="flex items-center gap-2 text-sm">
+                            <UserCircle className="w-4 h-4 text-[#6B7280]" />
+                            <span className="text-[#6B7280]">Satıcı:</span>
+                            <span className="font-medium">{getUserName(request.vendorId)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="w-4 h-4 text-[#6B7280]" />
+                            <span className="text-[#6B7280]">Ünvan:</span>
+                            <span className="font-medium">{request.address}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-4 h-4 text-[#6B7280]" />
+                            <span className="text-[#6B7280]">Telefon:</span>
+                            <span className="font-medium">{request.phone}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-[#6B7280]" />
+                            <span className="text-[#6B7280]">Tarix:</span>
+                            <span className="font-medium">
+                              {new Date(request.createdAt).toLocaleDateString("az-AZ")}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <p className="text-sm text-[#6B7280] mb-2">Kateqoriyalar:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {request.category.map((cat: string, idx: number) => (
+                              <span key={idx} className="px-3 py-1 bg-gray-100 text-[#6B7280] rounded-full text-sm">
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 ml-4">
+                        <Button
+                          onClick={() => handleApprove(request.id)}
+                          icon={<CheckCircle className="w-4 h-4" />}
+                          className="bg-emerald-500 hover:bg-emerald-600"
+                        >
+                          Təsdiqlə
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setShowRejectModal({ show: true, requestId: request.id })}
+                          icon={<XCircle className="w-4 h-4" />}
+                        >
+                          Rədd Et
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Processed Requests */}
+          {processedRequests.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-[#1F2937] mb-4">
+                İşlənmiş Müraciətlər ({processedRequests.length})
+              </h2>
+              <Card className="overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-[#6B7280]">Mağaza</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-[#6B7280]">Satıcı</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-[#6B7280]">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-semibold text-[#6B7280]">Tarix</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {processedRequests.map(request => (
+                      <tr key={request.id} className="border-t border-gray-100">
+                        <td className="py-3 px-4 font-medium">{request.name}</td>
+                        <td className="py-3 px-4 text-[#6B7280]">{getUserName(request.vendorId)}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            request.status === "approved" 
+                              ? "bg-emerald-100 text-emerald-700" 
+                              : "bg-red-100 text-red-700"
+                          }`}>
+                            {request.status === "approved" ? "Təsdiqləndi" : "Rədd edildi"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-[#6B7280]">
+                          {new Date(request.processedAt || request.createdAt).toLocaleDateString("az-AZ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Stores Tab */}
+      {activeSubTab === "stores" && (
+        <>
+          {allVendorStores.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Store className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-[#6B7280]">Hələ təsdiqlənmiş mağaza yoxdur</p>
+            </Card>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {allVendorStores.map(store => (
+                <Card key={store.id} className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 bg-[#D90429]/10 rounded-xl flex items-center justify-center">
+                      <Store className="w-6 h-6 text-[#D90429]" />
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      store.isActive 
+                        ? "bg-emerald-100 text-emerald-700" 
+                        : "bg-gray-100 text-gray-700"
+                    }`}>
+                      {store.isActive ? "Aktiv" : "Deaktiv"}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-[#1F2937] mb-2">{store.name}</h3>
+                  <p className="text-sm text-[#6B7280] mb-4 line-clamp-2">{store.description}</p>
+                  
+                  <div className="space-y-2 mb-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <UserCircle className="w-4 h-4 text-[#6B7280]" />
+                      <span>{getUserName(store.vendorId)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#6B7280]" />
+                      <span>{store.address}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-100">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-[#1F2937]">{store.totalSales}</p>
+                      <p className="text-xs text-[#6B7280]">Satış</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-[#1F2937]">{store.rating.toFixed(1)}</p>
+                      <p className="text-xs text-[#6B7280]">Reytinq</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-[#1F2937]">{store.reviewCount}</p>
+                      <p className="text-xs text-[#6B7280]">Rəy</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => {
+                        if (confirm(store.isActive ? "Mağazanı deaktiv etmək istədiyinizə əminsiniz?" : "Mağazanı aktiv etmək istədiyinizə əminsiniz?")) {
+                          vendorStores.update(store.id, { isActive: !store.isActive });
+                          onRefresh();
+                        }
+                      }}
+                    >
+                      {store.isActive ? "Deaktiv" : "Aktiv"}
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-bold text-[#1F2937] mb-4">Mağazanı Rədd Et</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#6B7280] mb-2">
+                Rədd Edilmə Səbəbi (istəyə bağlı)
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="w-full px-4 py-3 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D90429]"
+                rows={3}
+                placeholder="Mağazanın rədd edilmə səbəbini yazın..."
+              />
+            </div>
+            <div className="flex gap-4">
+              <Button
+                onClick={handleReject}
+                variant="secondary"
+                icon={<XCircle className="w-4 h-4" />}
+              >
+                Rədd Et
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowRejectModal({ show: false, requestId: "" });
+                  setRejectReason("");
+                }}
+              >
+                Ləğv Et
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </motion.div>
   );
 }
 

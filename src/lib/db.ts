@@ -209,12 +209,35 @@ export interface VendorStore {
   email: string;
   category: string[];
   isActive: boolean;
+  isApproved: boolean; // Admin approval status
   rating: number;
   reviewCount: number;
   totalSales: number;
   commissionRate: number; // default 5%
   createdAt: string;
   updatedAt: string;
+}
+
+// Store Request Interface (for pending store registrations)
+export interface StoreRequest {
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  vendorPhone: string;
+  name: string;
+  description: string;
+  logo?: string;
+  banner?: string;
+  address: string;
+  phone: string;
+  email: string;
+  category: string[];
+  status: "pending" | "approved" | "rejected";
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt?: string;
+  processedAt?: string;
+  processedBy?: string;
 }
 
 // Vendor Product Interface (products sold by vendors)
@@ -251,7 +274,12 @@ export interface VendorOrder {
   id: string;
   orderId: string;
   vendorId: string;
+  storeId: string;
+  storeName: string;
   customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
   items: {
     productId: string;
     productName: string;
@@ -263,6 +291,7 @@ export interface VendorOrder {
   commission: number; // 5% of subtotal
   vendorTotal: number; // subtotal - commission
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1461,7 +1490,10 @@ function saveVendorWithdrawals(withdrawals: VendorWithdrawal[]) {
 
 export const vendorStores = {
   getAll(): VendorStore[] {
-    return getVendorStores().filter(s => s.isActive);
+    return getVendorStores().filter(s => s.isActive && s.isApproved);
+  },
+  getAllIncludingInactive(): VendorStore[] {
+    return getVendorStores();
   },
   getById(id: string): VendorStore | undefined {
     return getVendorStores().find(s => s.id === id);
@@ -1491,6 +1523,140 @@ export const vendorStores = {
     all[index] = { ...all[index], ...updates, updatedAt: new Date().toISOString() };
     saveVendorStores(all);
     return all[index];
+  },
+  approve(id: string): VendorStore | null {
+    return this.update(id, { isApproved: true, isActive: true });
+  },
+  reject(id: string, reason?: string): VendorStore | null {
+    return this.update(id, { isApproved: false, isActive: false });
+  },
+};
+
+// Store Requests API (for pending store registrations)
+const STORE_REQUESTS_KEY = "decor_store_requests";
+
+function getStoreRequests(): StoreRequest[] {
+  if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem(STORE_REQUESTS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveStoreRequests(requests: StoreRequest[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORE_REQUESTS_KEY, JSON.stringify(requests));
+}
+
+export const storeRequests = {
+  getAll(): StoreRequest[] {
+    return getStoreRequests();
+  },
+  getPending(): StoreRequest[] {
+    return getStoreRequests().filter(r => r.status === "pending");
+  },
+  getByVendorId(vendorId: string): StoreRequest | undefined {
+    return getStoreRequests().find(r => r.vendorId === vendorId);
+  },
+  getById(id: string): StoreRequest | undefined {
+    return getStoreRequests().find(r => r.id === id);
+  },
+  create(request: Omit<StoreRequest, "id" | "createdAt" | "status" | "updatedAt">): StoreRequest {
+    // Check if vendor already has a pending request
+    const existing = getStoreRequests().find(r => r.vendorId === request.vendorId && r.status === "pending");
+    if (existing) {
+      throw new Error("Sizin artıq gözləyən mağaza müraciətiniz var");
+    }
+    
+    // Check if vendor already has an approved store
+    const existingStore = vendorStores.getByVendorId(request.vendorId);
+    if (existingStore?.isApproved) {
+      throw new Error("Sizin artıq təsdiqlənmiş mağazanız var");
+    }
+    
+    const newRequest: StoreRequest = {
+      ...request,
+      id: Date.now().toString(),
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const all = getStoreRequests();
+    all.push(newRequest);
+    saveStoreRequests(all);
+    return newRequest;
+  },
+  approve(id: string, adminId: string): StoreRequest | null {
+    const all = getStoreRequests();
+    const index = all.findIndex(r => r.id === id);
+    if (index === -1) return null;
+    
+    const request = all[index];
+    
+    // Create the actual store
+    const store = vendorStores.create({
+      vendorId: request.vendorId,
+      name: request.name,
+      description: request.description,
+      logo: request.logo,
+      banner: request.banner,
+      address: request.address,
+      phone: request.phone,
+      email: request.email,
+      category: request.category,
+      isActive: true,
+      isApproved: true,
+      commissionRate: 5,
+    });
+    
+    // Update user as vendor
+    auth.update(request.vendorId, { 
+      isVendor: true, 
+      storeId: store.id 
+    });
+    
+    // Update request status
+    all[index].status = "approved";
+    all[index].updatedAt = new Date().toISOString();
+    all[index].processedAt = new Date().toISOString();
+    all[index].processedBy = adminId;
+    saveStoreRequests(all);
+    
+    // Create notification for vendor
+    notifications.create({
+      userId: request.vendorId,
+      title: "Mağaza təsdiqləndi!",
+      message: `Tebrikler! "${request.name}" magazaniz tesdiqlendi ve Marketplace-de gorunur.`,
+      type: "system",
+    });
+    
+    return all[index];
+  },
+  reject(id: string, adminId: string, reason?: string): StoreRequest | null {
+    const all = getStoreRequests();
+    const index = all.findIndex(r => r.id === id);
+    if (index === -1) return null;
+    
+    all[index].status = "rejected";
+    all[index].rejectionReason = reason;
+    all[index].updatedAt = new Date().toISOString();
+    all[index].processedAt = new Date().toISOString();
+    all[index].processedBy = adminId;
+    saveStoreRequests(all);
+    
+    // Create notification for vendor
+    notifications.create({
+      userId: all[index].vendorId,
+      title: "Mağaza rədd edildi",
+      message: reason ? `Mağaza müraciətiniz rədd edildi. Səbəb: ${reason}` : "Mağaza müraciətiniz rədd edildi",
+      type: "system",
+    });
+    
+    return all[index];
+  },
+  delete(id: string): boolean {
+    const all = getStoreRequests().filter(r => r.id !== id);
+    if (all.length === getStoreRequests().length) return false;
+    saveStoreRequests(all);
+    return true;
   },
 };
 
@@ -1532,6 +1698,11 @@ export const vendorProducts = {
     const index = all.findIndex(p => p.id === id);
     if (index === -1) return false;
     all[index].isActive = false;
+    saveVendorProducts(all);
+    return true;
+  },
+  hardDelete(id: string): boolean {
+    const all = getVendorProducts().filter(p => p.id !== id);
     saveVendorProducts(all);
     return true;
   },
