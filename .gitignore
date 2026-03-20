@@ -44,6 +44,9 @@ next-env.d.ts
 backend/.gradle/
 backend/build/
 
+# Maven
+backend/target/
+
 # VS Code
 .vscode/
 

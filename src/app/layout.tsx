@@ -1,7 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WhatsAppChat } from "@/components/ui/WhatsAppChat";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { LanguageProvider } from "@/context/LanguageContext";
+import { GoogleAnalytics, FacebookPixel } from "@/lib/analytics";
 
 export const metadata: Metadata = {
   title: {
@@ -61,6 +64,14 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
     apple: "/icon.svg",
   },
+  manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#D90429",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -69,11 +80,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="az" data-scroll-behavior="smooth">
-      <body className="antialiased font-sans">
-        {children}
-        <WhatsAppChat />
-        <SpeedInsights />
+    <html lang="az" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
+      <body className="antialiased font-sans dark:bg-gray-900 dark:text-white">
+        <ThemeProvider>
+          <LanguageProvider>
+            <GoogleAnalytics />
+            <FacebookPixel />
+            {children}
+            <WhatsAppChat />
+            <SpeedInsights />
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

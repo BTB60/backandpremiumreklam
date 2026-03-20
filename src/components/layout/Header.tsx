@@ -2,10 +2,13 @@
 
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Bell, User } from "lucide-react";
+import { Menu, X, Bell, User, MessageCircle } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { notifications } from "@/lib/db";
+import type { Notification } from "@/lib/db";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
 interface HeaderProps {
   variant?: "public" | "decorator" | "admin";
@@ -27,8 +30,8 @@ const decoratorNavItems = [
   { label: "Marketplace", href: "/marketplace" },
   { label: "Sifariş Yarat", href: "/dashboard/orders/new" },
   { label: "Tarixçə", href: "/dashboard/orders" },
-  { label: "Level", href: "/dashboard/level" },
-  { label: "Bonus", href: "/dashboard/bonus" },
+  { label: "Dəstək", href: "/dashboard/support" },
+  { label: "Bildirişlər", href: "/notifications" },
 ];
 
 const adminNavItems = [
@@ -38,8 +41,11 @@ const adminNavItems = [
   { label: "Maliyyə", href: "/admin/finance" },
 ];
 
-export function Header({ variant = "public", userName, notifications = 0 }: HeaderProps) {
+export function Header({ variant = "public", userName, notifications: propNotifications = 0 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   const navItems =
     variant === "public"
@@ -48,12 +54,53 @@ export function Header({ variant = "public", userName, notifications = 0 }: Head
       ? decoratorNavItems
       : adminNavItems;
 
+  // Use useMemo for notifications data
+  const notificationData = useMemo(() => {
+    if (variant === "public") {
+      return { userNotifications: [], unreadCount: 0 };
+    }
+    const all = notifications.getAll();
+    const unread = all.filter(n => !n.isRead);
+    return {
+      userNotifications: all.slice(0, 5),
+      unreadCount: unread.length || propNotifications
+    };
+  }, [variant, propNotifications]);
+
+  const [userNotifications, setUserNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(propNotifications);
+
+  // Sync useMemo result to state
+  useEffect(() => {
+    setUserNotifications(notificationData.userNotifications);
+    setUnreadCount(notificationData.unreadCount);
+  }, [notificationData]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMarkAsRead = (id: string) => {
+    notifications.markAsRead(id);
+    const all = notifications.getAll();
+    setUserNotifications(all.slice(0, 5));
+    setUnreadCount(all.filter(n => !n.isRead).length);
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/Backup_of_YENILOGO.svg"
               alt="Premium Reklam"
@@ -78,14 +125,105 @@ export function Header({ variant = "public", userName, notifications = 0 }: Head
           <div className="flex items-center gap-4">
             {variant !== "public" && (
               <>
-                <button className="relative p-2 text-[#6B7280] hover:text-[#D90429] transition-colors">
-                  <Bell className="w-5 h-5" />
-                  {notifications > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-[#D90429] text-white text-xs rounded-full flex items-center justify-center">
-                      {notifications}
-                    </span>
-                  )}
+                {/* Notification Bell */}
+                <div className="relative" ref={notificationRef}>
+                  <button 
+                    onClick={() => setNotificationOpen(!notificationOpen)}
+                    className="relative p-2 text-[#6B7280] hover:text-[#D90429] transition-colors"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 right-1 w-4 h-4 bg-[#D90429] text-white text-xs rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notification Dropdown */}
+                  <AnimatePresence>
+                    {notificationOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                      >
+                        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                          <h3 className="font-semibold text-[#1F2937]">Bildirişlər</h3>
+                          <Link 
+                            href="/notifications"
+                            onClick={() => setNotificationOpen(false)}
+                            className="text-sm text-[#D90429] hover:underline"
+                          >
+                            Hamısı
+                          </Link>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {userNotifications.length === 0 ? (
+                            <div className="p-6 text-center text-gray-500">
+                              <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">Bildiriş yoxdur</p>
+                            </div>
+                          ) : (
+                            userNotifications.map((notif) => (
+                              <div
+                                key={notif.id}
+                                className={cn(
+                                  "p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors",
+                                  !notif.isRead && "bg-blue-50/50"
+                                )}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={cn(
+                                    "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                                    notif.type === "order_status" ? "bg-emerald-100 text-emerald-600" :
+                                    notif.type === "payment" ? "bg-amber-100 text-amber-600" :
+                                    "bg-blue-100 text-blue-600"
+                                  )}>
+                                    <Bell className="w-4 h-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-[#1F2937]">{notif.title}</p>
+                                    <p className="text-xs text-[#6B7280] mt-0.5 line-clamp-2">{notif.message}</p>
+                                    <p className="text-xs text-[#9CA3AF] mt-1">
+                                      {new Date(notif.createdAt).toLocaleString("az-AZ", { 
+                                        day: "numeric", 
+                                        month: "short", 
+                                        hour: "2-digit", 
+                                        minute: "2-digit" 
+                                      })}
+                                    </p>
+                                  </div>
+                                  {!notif.isRead && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMarkAsRead(notif.id);
+                                      }}
+                                      className="text-xs text-[#D90429] hover:underline"
+                                    >
+                                      Oxundu
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Live Support Button */}
+                <button 
+                  onClick={() => setSupportOpen(true)}
+                  className="relative p-2 text-[#6B7280] hover:text-[#25D366] transition-colors"
+                  title="Canlı Dəstək"
+                >
+                  <MessageCircle className="w-5 h-5" />
                 </button>
+
                 <div className="hidden sm:flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-[#D90429]/10 flex items-center justify-center text-[#D90429]">
                     <User className="w-5 h-5" />
@@ -96,20 +234,22 @@ export function Header({ variant = "public", userName, notifications = 0 }: Head
             )}
             
             {variant === "public" && (
-              <div className="hidden md:flex items-center gap-3">
+              <>
+                <ThemeToggle />
+                <LanguageSelector />
                 <Link
                   href="/login"
-                  className="px-5 py-2.5 text-[#1F2937] font-medium hover:text-[#D90429] transition-colors"
+                  className="px-4 py-2 text-[#1F2937] font-medium hover:text-[#D90429] transition-colors"
                 >
                   Daxil ol
                 </Link>
                 <Link
                   href="/register"
-                  className="px-5 py-2.5 bg-[#D90429] text-white font-medium rounded-[14px] hover:bg-[#b80323] transition-colors"
+                  className="px-4 py-2 bg-[#D90429] text-white font-medium rounded-[14px] hover:bg-[#b80323] transition-colors"
                 >
                   Qeydiyyat
                 </Link>
-              </div>
+              </>
             )}
 
             {/* Mobile Menu Button */}
@@ -163,6 +303,98 @@ export function Header({ variant = "public", userName, notifications = 0 }: Head
               )}
             </nav>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Live Support Modal */}
+      <AnimatePresence>
+        {supportOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSupportOpen(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md z-50 bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              style={{ maxHeight: "80vh" }}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <MessageCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Canlı Dəstək</h3>
+                    <p className="text-sm text-white/80">Premium Reklam</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSupportOpen(false)}
+                  className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 flex-1 overflow-y-auto">
+                <p className="text-gray-600 mb-4">
+                  Salam! Sizə necə kömək edə bilərik?
+                </p>
+
+                <div className="space-y-3">
+                  <a
+                    href="https://wa.me/994507988177?text=Salam,+məlumat+almaq+istəyirəm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
+                  >
+                    <div className="w-10 h-10 bg-[#25D366] rounded-full flex items-center justify-center text-white">
+                      <MessageCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#1F2937]">WhatsApp ilə yazın</p>
+                      <p className="text-sm text-[#6B7280]">Sürətli cavab</p>
+                    </div>
+                  </a>
+
+                  <a
+                    href="tel:+994507988177"
+                    className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
+                  >
+                    <div className="w-10 h-10 bg-[#D90429] rounded-full flex items-center justify-center text-white">
+                      <Bell className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#1F2937]">Zəng edin</p>
+                      <p className="text-sm text-[#6B7280]">+994 50 798 81 77</p>
+                    </div>
+                  </a>
+
+                  <Link
+                    href="/dashboard/support"
+                    onClick={() => setSupportOpen(false)}
+                    className="flex items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors"
+                  >
+                    <div className="w-10 h-10 bg-[#4F46E5] rounded-full flex items-center justify-center text-white">
+                      <MessageCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#1F2937]">Mesaj göndərin</p>
+                      <p className="text-sm text-[#6B7280]">Adminəlangicə cavab</p>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </header>
