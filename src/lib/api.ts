@@ -1,9 +1,6 @@
 // API Client for Spring Boot Backend
-// Backend runs on localhost:8081
 
-const API_BASE = process.env.NODE_ENV === "production"
-  ? "/api"  // Production: same domain
-  : "http://localhost:8081/api";  // Development: Spring Boot
+const API_BASE = process.env.NEXT_PUBLIC_API_URL + "/api";
 
 // Helper function to check if response is JSON
 async function parseResponse(response: Response) {

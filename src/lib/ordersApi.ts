@@ -1,5 +1,4 @@
 // Orders API - uses Spring Boot Backend
-// Backend runs on localhost:8081
 
 export interface Order {
   id: number;
@@ -14,9 +13,7 @@ export interface Order {
   user_username?: string;
 }
 
-const API_BASE = process.env.NODE_ENV === "production"
-  ? "/api/orders"
-  : "http://localhost:8081/api/orders";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL + "/api/orders";
 
 // Helper function to check if response is JSON
 async function parseResponse(response: Response) {
