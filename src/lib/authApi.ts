@@ -160,29 +160,44 @@ async function fetchApi(endpoint: string, options: RequestInit = {}) {
       headers,
     });
 
+    // Check content type first
+    const contentType = res.headers.get("content-type");
+    const isJson = contentType && contentType.includes("application/json");
+
     if (!res.ok) {
       let errorMessage = "Xəta baş verdi";
-      try {
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
+      if (isJson) {
+        try {
           const error = await res.json();
           errorMessage = error.message || error.error || error.title || `Xəta (${res.status})`;
-        } else {
+        } catch {
           errorMessage = `Server xətası (${res.status}): ${res.statusText}`;
         }
-      } catch (e) {
-        errorMessage = `Server xətası (${res.status})`;
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON error response:", text);
+        errorMessage = `Server xətası (${res.status}): ${res.statusText}`;
       }
       throw new Error(errorMessage);
     }
 
-    const contentType = res.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
+    if (isJson) {
       return res.json();
+    } else {
+      // If not JSON, try to parse anyway, otherwise return empty object
+      try {
+        const text = await res.text();
+        if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+          return JSON.parse(text);
+        }
+        console.warn("Non-JSON response:", text.substring(0, 200));
+        return {};
+      } catch {
+        return {};
+      }
     }
-    return {};
   } catch (error: any) {
-    if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
+    if (error.message === "Failed to fetch" || error.message.includes("fetch") || error.message.includes("NetworkError")) {
       throw new Error("Server bağlantısı yoxdur. Backend işləyirmi?");
     }
     throw error;

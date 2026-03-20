@@ -5,6 +5,41 @@ const API_BASE = process.env.NODE_ENV === "production"
   ? "/api"  // Production: same domain
   : "http://localhost:8081/api";  // Development: Spring Boot
 
+// Helper function to check if response is JSON
+async function parseResponse(response: Response) {
+  const contentType = response.headers.get("content-type");
+  const isJson = contentType && contentType.includes("application/json");
+  
+  if (!response.ok) {
+    let errorMessage = "Xəta baş verdi";
+    if (isJson) {
+      try {
+        const error = await response.json();
+        errorMessage = error.message || error.error || error.title || `Xəta (${response.status})`;
+      } catch {
+        errorMessage = `Server xətası (${response.status}): ${response.statusText}`;
+      }
+    } else {
+      const text = await response.text();
+      console.error("Non-JSON error response:", text.substring(0, 500));
+      errorMessage = `Server xətası (${response.status}): ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  if (isJson) {
+    return response.json();
+  }
+  
+  // Try to parse anyway
+  const text = await response.text();
+  if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+    return JSON.parse(text);
+  }
+  console.warn("Non-JSON response:", text.substring(0, 200));
+  return {};
+}
+
 export const api = {
   // Auth
   async login(username: string, password: string) {
@@ -13,9 +48,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error);
-    return data.user;
+    return parseResponse(response).then(data => data.user);
   },
 
   async register(userData: {
@@ -29,24 +62,22 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(userData),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error);
-    return data.user;
+    return parseResponse(response).then(data => data.user);
   },
 
   // Users
   async getUsers() {
     const response = await fetch(`${API_BASE}/users`);
-    const data = await response.json();
-    return data.users;
+    const data = await parseResponse(response);
+    return data.users || [];
   },
 
   // Orders
   async getOrders(userId?: string) {
     const url = userId ? `${API_BASE}/orders?userId=${userId}` : `${API_BASE}/orders`;
     const response = await fetch(url);
-    const data = await response.json();
-    return data.orders;
+    const data = await parseResponse(response);
+    return data.orders || [];
   },
 
   async createOrder(orderData: any) {
@@ -55,9 +86,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(orderData),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error);
-    return data.order;
+    return parseResponse(response).then(data => data.order);
   },
 
   async updateOrderStatus(id: string, status: string) {
@@ -66,9 +95,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status }),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error);
-    return data.order;
+    return parseResponse(response).then(data => data.order);
   },
 };
 

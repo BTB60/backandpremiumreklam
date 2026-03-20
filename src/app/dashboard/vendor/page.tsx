@@ -316,6 +316,7 @@ function CreateStoreForm({
       logo: formData.logo,
       banner: formData.banner,
       isActive: true,
+      isApproved: true,
       commissionRate: 0.05, // 5%
     });
 
