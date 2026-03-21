@@ -1,18 +1,18 @@
-# 1. Java 17 mühitini quraşdırırıq (Stabil və yüngül versiya)
+# 1. Java mühiti
 FROM eclipse-temurin:17-jdk-alpine
 
-# 2. İşçi qovluğu yaradırıq (Bütün fayllar burada toplanacaq)
+# 2. İşçi qovluğu
 WORKDIR /app
 
-# 3. Layihənin bütün fayllarını konteynerə kopyalayırıq
+# 3. Faylları kopyala
 COPY . .
 
-# 4. Gradle faylına icazə veririk və proqramı yığırıq (Build)
+# 4. Proqramı yığ (Build)
 RUN chmod +x gradlew
-RUN ./gradlew build -x test
+RUN ./gradlew bootJar -x test
 
-# 5. Render-in istifadə etdiyi portu açırıq
+# 5. Port
 EXPOSE 8080
 
-# 6. Proqramı işə salırıq (Fayl adından asılı olmayaraq *.jar ilə tapırıq)
-ENTRYPOINT ["sh", "-c", "java -jar build/libs/*.jar"]
+# 6. Proqramı birbaşa işə sal (Ən dəqiq yol)
+ENTRYPOINT ["java", "-jar", "build/libs/premium-reklam-backend-1.0.0.jar"]
