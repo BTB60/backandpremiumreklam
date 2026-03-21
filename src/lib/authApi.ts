@@ -1,6 +1,6 @@
 const BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
   ? 'http://localhost:8081'
-  : (process.env.NEXT_PUBLIC_API_URL || 'https://backandpremiumreklam-1.onrender.com');
+  : (process.env.NEXT_PUBLIC_API_URL || 'https://backandpremiumreklam-2.onrender.com');
 
 // Map backend role to frontend role
 function mapRole(role: string): string {
@@ -207,7 +207,7 @@ async function fetchApi(endpoint: string, options: RequestInit = {}) {
 
 export const authApi = {
   async register(userData: any) {
-    const res = await fetch(`${BASE_URL}/api/auth/register`, {
+    const res = await fetch(`${BASE_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(userData),
@@ -220,7 +220,7 @@ export const authApi = {
 
   async login(username: string, password: string): Promise<UserData> {
     try {
-      const res = await fetch(`${BASE_URL}/api/auth/login`, {
+      const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

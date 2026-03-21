@@ -15,7 +15,7 @@ export interface Order {
 
 const API_BASE = (typeof window !== 'undefined' && window.location.hostname === 'localhost'
   ? 'http://localhost:8081'
-  : process.env.NEXT_PUBLIC_API_URL) + '/api/orders';
+  : process.env.NEXT_PUBLIC_API_URL) + '/orders';
 
 // Helper function to check if response is JSON
 async function parseResponse(response: Response) {
