@@ -13,9 +13,7 @@ export interface Order {
   user_username?: string;
 }
 
-const API_BASE = (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-  ? 'http://localhost:8081'
-  : process.env.NEXT_PUBLIC_API_URL) + '/orders';
+const API_BASE = 'https://backandpremiumreklam-2.onrender.com/api/orders';
 
 // Helper function to check if response is JSON
 async function parseResponse(response: Response) {
