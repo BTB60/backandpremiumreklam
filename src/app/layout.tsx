@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WhatsAppChat } from "@/components/ui/WhatsAppChat";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { ThemeProvider } from "@/context/ThemeContext";
-import { LanguageProvider } from "@/context/LanguageContext";
 import { GoogleAnalytics, FacebookPixel } from "@/lib/analytics";
 
 export const metadata: Metadata = {
@@ -68,7 +66,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#D90429",
+  themeColor: "#C41E3A",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -84,16 +82,12 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="antialiased font-sans dark:bg-gray-900 dark:text-white">
-        <ThemeProvider>
-          <LanguageProvider>
-            <GoogleAnalytics />
-            <FacebookPixel />
-            {children}
-            <WhatsAppChat />
-            <SpeedInsights />
-          </LanguageProvider>
-        </ThemeProvider>
+      <body className="antialiased font-sans bg-white text-gray-900">
+        <GoogleAnalytics />
+        <FacebookPixel />
+        {children}
+        <WhatsAppChat />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -7,8 +7,6 @@ import Link from "next/link";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { notifications } from "@/lib/db";
 import type { Notification } from "@/lib/db";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { LanguageSelector } from "@/components/ui/LanguageSelector";
 
 interface HeaderProps {
   variant?: "public" | "decorator" | "admin";
@@ -235,8 +233,6 @@ export function Header({ variant = "public", userName, notifications: propNotifi
             
             {variant === "public" && (
               <>
-                <ThemeToggle />
-                <LanguageSelector />
                 <Link
                   href="/login"
                   className="px-4 py-2 text-[#0A0A0A] font-medium hover:text-[#C41E3A] transition-colors text-sm"
