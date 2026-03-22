@@ -106,7 +106,7 @@ export default function AdminDashboardPage() {
   const [allWorkerTasks, setAllWorkerTasks] = useState<WorkerTask[]>([]);
   const [allStoreRequests, setAllStoreRequests] = useState<StoreRequest[]>([]);
   const [allVendorStores, setAllVendorStores] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "orders" | "notifications" | "analytics" | "products" | "finance" | "inventory" | "workerTasks" | "support" | "settings" | "tasks" | "userDetail" | "vendors">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "orders" | "payments" | "notifications" | "analytics" | "products" | "finance" | "inventory" | "workerTasks" | "support" | "settings" | "tasks" | "userDetail" | "vendors">("dashboard");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

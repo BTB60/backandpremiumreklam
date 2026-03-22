@@ -473,7 +473,7 @@ export function PaymentManagement({ allUsers, onRefresh }: PaymentManagementProp
                           >
                             <DollarSign className="w-4 h-4" />
                           </button>
-                          {!isCancelled && Number(order.remaining_amount || order.remainingAmount || 0) > 0 && (
+                          {!isCancelled && Number(order.remaining_amount || 0) > 0 && (
                             <button
                               onClick={() => handleSetPaid(order)}
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -482,7 +482,7 @@ export function PaymentManagement({ allUsers, onRefresh }: PaymentManagementProp
                               <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
-                          {!isCancelled && Number(order.remaining_amount || order.remainingAmount || 0) === 0 && order.payment_status !== "PENDING" && order.paymentStatus !== "PENDING" && (
+                          {!isCancelled && Number(order.remaining_amount || 0) === 0 && order.payment_status !== "PENDING" && (
                             <button
                               onClick={() => handleSetPending(order)}
                               className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg"
@@ -528,16 +528,16 @@ export function PaymentManagement({ allUsers, onRefresh }: PaymentManagementProp
               </div>
               <div className="flex justify-between mb-2">
                 <span className="text-gray-600">Ümumi məbləğ:</span>
-                <span className="font-bold">{Number(selectedOrder.total_amount || selectedOrder.totalAmount || 0).toFixed(2)} AZN</span>
+                <span className="font-bold">{Number(selectedOrder.total_amount || 0).toFixed(2)} AZN</span>
               </div>
               <div className="flex justify-between mb-2">
                 <span className="text-gray-600">Ödənilib:</span>
-                <span className="font-semibold text-green-600">{Number(selectedOrder.paid_amount || selectedOrder.paidAmount || 0).toFixed(2)} AZN</span>
+                <span className="font-semibold text-green-600">{Number(selectedOrder.paid_amount || 0).toFixed(2)} AZN</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Qalan:</span>
                 <span className="font-bold text-red-600">
-                  {(Number(selectedOrder.total_amount || selectedOrder.totalAmount || 0) - Number(selectedOrder.paid_amount || selectedOrder.paidAmount || 0)).toFixed(2)} AZN
+                  {(Number(selectedOrder.total_amount || 0) - Number(selectedOrder.paid_amount || 0)).toFixed(2)} AZN
                 </span>
               </div>
             </div>
