@@ -103,6 +103,7 @@ export interface Order {
   totalAmount: number;
   paidAmount: number;
   remainingAmount: number;
+  paymentStatus: 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED';
   paymentMethod: string;
   isCredit: boolean;
   note?: string;
@@ -340,34 +341,113 @@ export const productApi = {
   },
 };
 
+export interface OrderSummary {
+  todayOrderCount: number;
+  todayOrderAmount: number;
+  monthOrderCount: number;
+  monthOrderAmount: number;
+  totalPaid: number;
+  totalDebt: number;
+  totalOrders: number;
+  totalAmount: number;
+}
+
 export const orderApi = {
-  async getAll(): Promise<Order[]> {
-    return fetchApi("/orders");
+  async getAll(filters?: { userId?: string; status?: string; paymentStatus?: string; dateFrom?: string; dateTo?: string }): Promise<{ orders: Order[]; summary?: OrderSummary; total: number }> {
+    const params = new URLSearchParams();
+    if (filters?.userId) params.set('userId', filters.userId);
+    if (filters?.status) params.set('status', filters.status);
+    if (filters?.paymentStatus) params.set('paymentStatus', filters.paymentStatus);
+    if (filters?.dateFrom) params.set('dateFrom', filters.dateFrom);
+    if (filters?.dateTo) params.set('dateTo', filters.dateTo);
+    
+    const queryString = params.toString();
+    return fetchApi(`/orders${queryString ? '?' + queryString : ''}`);
   },
 
-  async getMyOrders(): Promise<Order[]> {
-    return fetchApi("/orders/my");
+  async getMyOrders(): Promise<{ orders: Order[]; summary?: OrderSummary; total: number }> {
+    const user = getCurrentUser();
+    if (!user) return { orders: [], summary: undefined, total: 0 };
+    return fetchApi(`/orders?userId=${user.userId}`);
+  },
+
+  async getMySummary(): Promise<OrderSummary> {
+    const user = getCurrentUser();
+    if (!user) {
+      return {
+        todayOrderCount: 0,
+        todayOrderAmount: 0,
+        monthOrderCount: 0,
+        monthOrderAmount: 0,
+        totalPaid: 0,
+        totalDebt: 0,
+        totalOrders: 0,
+        totalAmount: 0,
+      };
+    }
+    const data = await fetchApi(`/orders?userId=${user.userId}&summary=true`);
+    return data.summary || {
+      todayOrderCount: 0,
+      todayOrderAmount: 0,
+      monthOrderCount: 0,
+      monthOrderAmount: 0,
+      totalPaid: 0,
+      totalDebt: 0,
+      totalOrders: 0,
+      totalAmount: 0,
+    };
   },
 
   async getById(id: number): Promise<Order> {
-    return fetchApi(`/orders/${id}`);
+    const data = await fetchApi(`/orders?limit=1000`);
+    const order = data.orders?.find((o: any) => o.id === id);
+    return order || null;
   },
 
   async create(orderData: any): Promise<Order> {
-    return fetchApi("/orders", {
+    const user = getCurrentUser();
+    const data = await fetchApi("/orders", {
       method: "POST",
-      body: JSON.stringify(orderData),
+      body: JSON.stringify({
+        ...orderData,
+        userId: user?.userId || orderData.userId,
+      }),
     });
+    return data.order;
   },
 
   async updateStatus(id: number, status: string): Promise<Order> {
-    return fetchApi(`/orders/${id}/status?status=${mapStatus(status)}`, {
-      method: "PUT",
+    return fetchApi(`/orders?orderId=${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        type: 'status',
+        orderId: id,
+        status: mapStatus(status),
+      }),
     });
   },
 
+  async updatePayment(id: number, paidAmount: number, paymentMethod?: string, note?: string): Promise<Order> {
+    return fetchApi("/orders", {
+      method: "PATCH",
+      body: JSON.stringify({
+        type: 'payment',
+        orderId: id,
+        paidAmount,
+        paymentMethod: paymentMethod || 'CASH',
+        note,
+      }),
+    });
+  },
+
+  async addPayment(id: number, amount: number, paymentMethod?: string, note?: string): Promise<Order> {
+    const order = await this.getById(id);
+    const newPaidAmount = (order?.paidAmount || 0) + amount;
+    return this.updatePayment(id, newPaidAmount, paymentMethod, note);
+  },
+
   async delete(id: number): Promise<void> {
-    return fetchApi(`/orders/${id}`, {
+    return fetchApi(`/orders?id=${id}`, {
       method: "DELETE",
     });
   },

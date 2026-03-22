@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { orderApi, productApi, authApi, type Order, type Product } from "@/lib/authApi";
+import { orderApi, productApi, authApi, type Order, type Product, type OrderSummary } from "@/lib/authApi";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -21,13 +21,17 @@ import {
   User,
   ShoppingBag,
   RefreshCw,
-  Store
+  Store,
+  AlertCircle,
+  TrendingUp,
+  Wallet
 } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [userOrders, setUserOrders] = useState<Order[]>([]);
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,15 +66,19 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [ordersData, productsData] = await Promise.all([
+      const [ordersResponse, productsData] = await Promise.all([
         orderApi.getMyOrders(),
         productApi.getAll(),
       ]);
-      setUserOrders(ordersData || []);
+      // Handle new API response format
+      const ordersData = ordersResponse as any;
+      setUserOrders(ordersData.orders || []);
+      setOrderSummary(ordersData.summary || null);
       setProducts(productsData.filter((p: Product) => p.status === "ACTIVE") || []);
     } catch (error) {
       console.error("Data load error:", error);
       setUserOrders([]);
+      setOrderSummary(null);
       setProducts([]);
     } finally {
       setLoading(false);
@@ -141,10 +149,10 @@ export default function DashboardPage() {
     }
   };
 
-  // Calculate stats
-  const totalSpent = userOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const completedOrders = userOrders.filter(o => o.status === "COMPLETED").length;
-  const pendingOrders = userOrders.filter(o => o.status === "PENDING").length;
+  // Calculate stats from summary
+  const totalSpent = orderSummary?.totalPaid || userOrders.reduce((sum, o) => sum + (o.total_amount || o.totalAmount || 0), 0);
+  const completedOrders = userOrders.filter(o => o.status === "COMPLETED" || o.status === "completed").length;
+  const pendingOrders = userOrders.filter(o => o.payment_status === "PENDING" || o.status === "PENDING").length;
 
   if (loading) {
     return (
@@ -229,23 +237,11 @@ export default function DashboardPage() {
               <Card className="p-5">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-[#16A34A]/10 rounded-xl flex items-center justify-center">
-                    <CheckCircle className="w-6 h-6 text-[#16A34A]" />
+                    <TrendingUp className="w-6 h-6 text-[#16A34A]" />
                   </div>
                   <div>
-                    <p className="text-xs text-[#6B7280]">Tamamlanan</p>
-                    <p className="text-2xl font-bold text-[#1F2937]">{completedOrders}</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-[#F59E0B]/10 rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-[#F59E0B]" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-[#6B7280]">Gözləyən</p>
-                    <p className="text-2xl font-bold text-[#1F2937]">{pendingOrders}</p>
+                    <p className="text-xs text-[#6B7280]">Bu Ay Sifariş</p>
+                    <p className="text-2xl font-bold text-[#1F2937]">{orderSummary?.monthOrderCount || 0}</p>
                   </div>
                 </div>
               </Card>
@@ -256,8 +252,20 @@ export default function DashboardPage() {
                     <DollarSign className="w-6 h-6 text-[#3B82F6]" />
                   </div>
                   <div>
-                    <p className="text-xs text-[#6B7280]">Ümumi Xərc</p>
-                    <p className="text-2xl font-bold text-[#1F2937]">{totalSpent.toFixed(2)}</p>
+                    <p className="text-xs text-[#6B7280]">Ödənilib</p>
+                    <p className="text-2xl font-bold text-[#16A34A]">{(orderSummary?.totalPaid || totalSpent).toFixed(2)}</p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-[#EF4444]/10 rounded-xl flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-[#EF4444]" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#6B7280]">Qalan Borc</p>
+                    <p className="text-2xl font-bold text-[#EF4444]">{(orderSummary?.totalDebt || 0).toFixed(2)}</p>
                   </div>
                 </div>
               </Card>
@@ -541,23 +549,36 @@ export default function DashboardPage() {
                   <Card key={order.id} className="p-5">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <p className="font-bold text-[#1F2937] text-lg">#{order.orderNumber}</p>
+                        <p className="font-bold text-[#D90429] text-lg">#{order.order_number || order.orderNumber}</p>
                         <p className="text-sm text-[#6B7280]">
-                          {new Date(order.createdAt).toLocaleString("az-AZ")}
+                          {new Date(order.created_at || order.createdAt).toLocaleString("az-AZ")}
                         </p>
                       </div>
-                      <StatusBadge status={order.status?.toLowerCase() || "pending"} />
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={order.status?.toLowerCase() || "pending"} />
+                        {/* Payment Status Badge */}
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          order.payment_status === "PAID" ? "bg-green-100 text-green-700" :
+                          order.payment_status === "PARTIAL" ? "bg-orange-100 text-orange-700" :
+                          order.payment_status === "CANCELLED" ? "bg-red-100 text-red-700" :
+                          "bg-yellow-100 text-yellow-700"
+                        }`}>
+                          {order.payment_status === "PAID" ? "Ödənilib" :
+                           order.payment_status === "PARTIAL" ? "Qismən" :
+                           order.payment_status === "CANCELLED" ? "Ləğv" : "Gözləyir"}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="space-y-2 mb-4">
-                      {order.items?.map((item, idx) => (
+                      {order.items?.map((item: any, idx: number) => (
                         <div key={idx} className="flex items-center justify-between text-sm bg-[#F9FAFB] rounded-lg p-3">
-                          <span className="text-[#1F2937]">{item.productName}</span>
+                          <span className="text-[#1F2937]">{item.product_name || item.productName}</span>
                           <span className="text-[#6B7280]">
                             {item.width && item.height ? `${item.width}×${item.height}m` : ""} 
                             {item.quantity > 1 ? ` × ${item.quantity}` : ""}
                           </span>
-                          <span className="font-semibold text-[#1F2937]">{item.lineTotal?.toFixed(2)} AZN</span>
+                          <span className="font-semibold text-[#1F2937]">{(item.line_total || item.lineTotal)?.toFixed(2)} AZN</span>
                         </div>
                       ))}
                     </div>
@@ -565,21 +586,26 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between pt-4 border-t border-[#E5E7EB]">
                       <div>
                         <p className="text-sm text-[#6B7280]">Müştəri</p>
-                        <p className="font-semibold text-[#1F2937]">{order.customerName}</p>
-                        {order.customerPhone && <p className="text-sm text-[#6B7280]">{order.customerPhone}</p>}
+                        <p className="font-semibold text-[#1F2937]">{order.customer_name || order.customerName}</p>
+                        {order.customer_phone && <p className="text-sm text-[#6B7280]">{order.customer_phone}</p>}
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-[#6B7280]">Ümumi</p>
-                        <p className="text-2xl font-bold text-[#D90429]">{order.totalAmount?.toFixed(2)} AZN</p>
+                        <p className="text-xl font-bold text-[#D90429]">{(order.total_amount || order.totalAmount || 0).toFixed(2)} AZN</p>
                       </div>
                     </div>
 
-                    {order.note && (
-                      <div className="mt-4 pt-4 border-t border-[#E5E7EB]">
-                        <p className="text-sm text-[#6B7280]">Qeyd:</p>
-                        <p className="text-sm text-[#1F2937]">{order.note}</p>
+                    {/* Payment Info */}
+                    <div className="mt-4 pt-4 border-t border-[#E5E7EB] grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <p className="text-xs text-[#6B7280]">Ödənilib</p>
+                        <p className="text-lg font-bold text-green-600">{(order.paid_amount || order.paidAmount || 0).toFixed(2)} AZN</p>
                       </div>
-                    )}
+                      <div className="text-center p-3 bg-red-50 rounded-lg">
+                        <p className="text-xs text-[#6B7280]">Qalan</p>
+                        <p className="text-lg font-bold text-red-600">{(order.remaining_amount || order.remainingAmount || 0).toFixed(2)} AZN</p>
+                      </div>
+                    </div>
                   </Card>
                 ))}
               </div>

@@ -15,6 +15,7 @@ import { FinanceDashboard } from "@/components/admin/FinanceDashboard";
 import { InventoryManager } from "@/components/admin/InventoryManager";
 import { WorkerTasksManager } from "@/components/admin/WorkerTasksManager";
 import { SupportManager } from "@/components/admin/SupportManager";
+import { PaymentManagement } from "@/components/admin/PaymentManagement";
 import { 
   Shield, 
   Users, 
@@ -137,19 +138,22 @@ function findOrderUser(order: any, allUsers: any[]) {
 
   const loadData = async () => {
     try {
-      const [users, apiOrders, apiProducts] = await Promise.all([
+      const [users, ordersData, apiProducts] = await Promise.all([
         authApi.getAllUsers(),
         orderApi.getAll(),
         productApi.getAll(),
       ]);
       setAllUsers(users as any);
+      // Handle new API response format - cast to any to bypass strict typing
+      const ordersResponse = ordersData as unknown as { orders: any[] };
+      const apiOrders = ordersResponse.orders || [];
       // Enrich orders with user info
       const enrichedOrders = apiOrders.map((order: any) => {
-        const userId = order.userId ?? order.user?.id;
+        const userId = order.userId ?? order.user?.id ?? order.user_id;
         const user = userId ? users.find((u: any) => String(u.id) === String(userId) || u.id == userId) : null;
         return {
           ...order,
-          userId: userId || order.userId,
+          userId: userId || order.userId || order.user_id,
           user: user || null,
         };
       });
@@ -373,7 +377,7 @@ function findOrderUser(order: any, allUsers: any[]) {
             </button>
           </div>
           <nav className="p-4 space-y-2">
-            {[              { id: "dashboard", label: "Dashboard", icon: TrendingUp },              { id: "users", label: "İstifadəçilər", icon: Users },              { id: "orders", label: "Sifarişlər", icon: Package },              { id: "vendors", label: "Mağazalar", icon: Store },              { id: "notifications", label: "Bildirişlər", icon: Bell },              { id: "analytics", label: "Analytics", icon: BarChart3 },              { id: "products", label: "Məhsullar", icon: Store },              { id: "finance", label: "Maliyyə", icon: Wallet },              { id: "inventory", label: "Anbar", icon: Boxes },              { id: "workerTasks", label: "İşçi Tapşırıqları", icon: ClipboardList },              { id: "support", label: "Dəstək", icon: Headphones },              { id: "tasks", label: "Tapşırıqlar", icon: CheckSquare },              { id: "settings", label: "Sistem Ayarları", icon: Settings },            ].map((item) => (
+            {[              { id: "dashboard", label: "Dashboard", icon: TrendingUp },              { id: "users", label: "İstifadəçilər", icon: Users },              { id: "orders", label: "Sifarişlər", icon: Package },              { id: "payments", label: "Ödənişlər", icon: DollarSign },              { id: "vendors", label: "Mağazalar", icon: Store },              { id: "notifications", label: "Bildirişlər", icon: Bell },              { id: "analytics", label: "Analytics", icon: BarChart3 },              { id: "products", label: "Məhsullar", icon: Store },              { id: "finance", label: "Maliyyə", icon: Wallet },              { id: "inventory", label: "Anbar", icon: Boxes },              { id: "workerTasks", label: "İşçi Tapşırıqları", icon: ClipboardList },              { id: "support", label: "Dəstək", icon: Headphones },              { id: "tasks", label: "Tapşırıqlar", icon: CheckSquare },              { id: "settings", label: "Sistem Ayarları", icon: Settings },            ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -778,6 +782,13 @@ function findOrderUser(order: any, allUsers: any[]) {
               updateOrderStatus={updateOrderStatus}
               deleteOrder={deleteOrder}
               viewUserDetail={viewUserDetail as any}
+            />
+          )}
+
+          {activeTab === "payments" && (
+            <PaymentManagement
+              allUsers={allUsers as any}
+              onRefresh={loadData}
             />
           )}
 
