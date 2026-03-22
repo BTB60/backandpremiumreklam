@@ -3,12 +3,24 @@ import { neon } from "@neondatabase/serverless";
 
 // Get database URL from environment
 function getDatabaseUrl(): string {
-  return (
+  // Try multiple environment variable names
+  const dbUrl = 
     process.env.DATABASE_URL ||
     process.env.premiumreklambaku_DATABASE_URL ||
+    process.env.NEXT_PUBLIC_DATABASE_URL ||
     process.env.premiumreklambaku_POSTGRES_URL ||
-    ""
-  );
+    "";
+  
+  return dbUrl;
+}
+
+// GET - Check environment
+export async function GET(req: NextRequest) {
+  const hasDbUrl = !!(process.env.DATABASE_URL || process.env.premiumreklambaku_DATABASE_URL);
+  return NextResponse.json({
+    hasDatabaseUrl: hasDbUrl,
+    envKeys: Object.keys(process.env).filter(k => k.includes('DATABASE') || k.includes('POSTGRES')),
+  });
 }
 
 // PATCH - Add payment to order
@@ -16,13 +28,15 @@ export async function PATCH(req: NextRequest) {
   try {
     const dbUrl = getDatabaseUrl();
     if (!dbUrl) {
+      console.error("No database URL configured");
       return NextResponse.json(
         { success: false, message: "Database not configured" },
         { status: 500 }
       );
     }
 
-    const orderId = Number(req.nextUrl.searchParams.get("orderId"));
+    const orderIdParam = req.nextUrl.searchParams.get("orderId");
+    const orderId = Number(orderIdParam);
     const body = await req.json();
     const amount = Number(body?.amount);
 
@@ -41,6 +55,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // Create sql client
     const sql = neon(dbUrl);
 
     // Get current order
@@ -68,11 +83,10 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Calculate new payment
-    const newPaidAmount = Math.min(
-      Number(order.paid_amount) + amount,
-      Number(order.total_amount)
-    );
-    const newRemainingAmount = Number(order.total_amount) - newPaidAmount;
+    const currentTotal = Number(order.total_amount);
+    const currentPaid = Number(order.paid_amount);
+    const newPaidAmount = Math.min(currentPaid + amount, currentTotal);
+    const newRemainingAmount = currentTotal - newPaidAmount;
 
     // Determine new status
     let newStatus = "PARTIAL";
@@ -97,10 +111,10 @@ export async function PATCH(req: NextRequest) {
       message: "Ödəniş əlavə edildi.",
       order: updatedOrder[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Payment error:", error);
     return NextResponse.json(
-      { success: false, message: "Server xətası baş verdi." },
+      { success: false, message: error.message || "Server xətası baş verdi." },
       { status: 500 }
     );
   }
