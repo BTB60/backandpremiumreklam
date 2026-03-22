@@ -95,11 +95,11 @@ export function Header({ variant = "public", userName, notifications: propNotifi
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[#E5E7EB]">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-[#E5E5E5] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/Backup_of_YENILOGO.svg"
@@ -109,12 +109,12 @@ export function Header({ variant = "public", userName, notifications: propNotifi
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-[#6B7280] hover:text-[#D90429] font-medium transition-colors"
+                className="px-4 py-2 text-[#4A4A4A] hover:text-[#C41E3A] font-medium text-sm transition-colors rounded-lg hover:bg-gray-50"
               >
                 {item.label}
               </Link>
@@ -122,18 +122,18 @@ export function Header({ variant = "public", userName, notifications: propNotifi
           </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             {variant !== "public" && (
               <>
                 {/* Notification Bell */}
                 <div className="relative" ref={notificationRef}>
                   <button 
                     onClick={() => setNotificationOpen(!notificationOpen)}
-                    className="relative p-2 text-[#6B7280] hover:text-[#D90429] transition-colors"
+                    className="relative p-2.5 text-[#4A4A4A] hover:text-[#C41E3A] hover:bg-gray-100 rounded-xl transition-all"
                   >
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 w-4 h-4 bg-[#D90429] text-white text-xs rounded-full flex items-center justify-center">
+                      <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-[#C41E3A] text-white text-xs font-bold rounded-full flex items-center justify-center shadow-sm">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
@@ -218,17 +218,17 @@ export function Header({ variant = "public", userName, notifications: propNotifi
                 {/* Live Support Button */}
                 <button 
                   onClick={() => setSupportOpen(true)}
-                  className="relative p-2 text-[#6B7280] hover:text-[#25D366] transition-colors"
+                  className="relative p-2.5 text-[#4A4A4A] hover:text-[#059669] hover:bg-gray-100 rounded-xl transition-all"
                   title="Canlı Dəstək"
                 >
                   <MessageCircle className="w-5 h-5" />
                 </button>
 
-                <div className="hidden sm:flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-[#D90429]/10 flex items-center justify-center text-[#D90429]">
-                    <User className="w-5 h-5" />
+                <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-gray-200">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#C41E3A] to-[#9A1529] flex items-center justify-center text-white shadow-sm">
+                    <User className="w-4 h-4" />
                   </div>
-                  <span className="text-sm font-medium text-[#1F2937]">{userName}</span>
+                  <span className="text-sm font-medium text-[#0A0A0A]">{userName}</span>
                 </div>
               </>
             )}
@@ -239,13 +239,13 @@ export function Header({ variant = "public", userName, notifications: propNotifi
                 <LanguageSelector />
                 <Link
                   href="/login"
-                  className="px-4 py-2 text-[#1F2937] font-medium hover:text-[#D90429] transition-colors"
+                  className="px-4 py-2 text-[#0A0A0A] font-medium hover:text-[#C41E3A] transition-colors text-sm"
                 >
                   Daxil ol
                 </Link>
                 <Link
                   href="/register"
-                  className="px-4 py-2 bg-[#D90429] text-white font-medium rounded-[14px] hover:bg-[#b80323] transition-colors"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#C41E3A] to-[#9A1529] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-red-500/25 transition-all text-sm hidden sm:inline-block"
                 >
                   Qeydiyyat
                 </Link>
@@ -255,7 +255,7 @@ export function Header({ variant = "public", userName, notifications: propNotifi
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-[#6B7280]"
+              className="lg:hidden p-2.5 text-[#4A4A4A] hover:bg-gray-100 rounded-xl transition-all"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -270,32 +270,32 @@ export function Header({ variant = "public", userName, notifications: propNotifi
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white border-t border-[#E5E7EB]"
+            className="lg:hidden bg-white border-t border-[#E5E5E5] shadow-lg"
           >
-            <nav className="px-4 py-4 space-y-2">
+            <nav className="px-4 py-4 space-y-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-3 text-[#6B7280] hover:text-[#D90429] hover:bg-gray-50 rounded-xl font-medium transition-colors"
+                  className="block px-4 py-3.5 text-[#4A4A4A] hover:text-[#C41E3A] hover:bg-gray-50 rounded-xl font-medium transition-colors"
                 >
                   {item.label}
                 </Link>
               ))}
               {variant === "public" && (
-                <div className="pt-4 border-t border-[#E5E7EB] space-y-2">
+                <div className="pt-4 mt-4 border-t border-[#E5E5E5] space-y-2">
                   <Link
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-3 text-[#1F2937] font-medium"
+                    className="block px-4 py-3.5 text-[#0A0A0A] font-medium bg-gray-50 rounded-xl text-center"
                   >
                     Daxil ol
                   </Link>
                   <Link
                     href="/register"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-3 bg-[#D90429] text-white font-medium rounded-xl text-center"
+                    className="block px-4 py-3.5 bg-gradient-to-r from-[#C41E3A] to-[#9A1529] text-white font-semibold rounded-xl text-center shadow-sm"
                   >
                     Qeydiyyat
                   </Link>
