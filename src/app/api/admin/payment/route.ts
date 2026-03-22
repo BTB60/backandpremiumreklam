@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
 
     // Get current order
     const currentOrder = await sql`
-      SELECT id, total_price, paid_amount, remaining_amount, payment_status, user_id 
+      SELECT id, total_amount, paid_amount, remaining_amount, payment_status, user_id 
       FROM orders 
       WHERE id = ${orderId}
     `;
@@ -70,9 +70,9 @@ export async function PATCH(req: NextRequest) {
     // Calculate new payment
     const newPaidAmount = Math.min(
       Number(order.paid_amount) + amount,
-      Number(order.total_price)
+      Number(order.total_amount)
     );
-    const newRemainingAmount = Number(order.total_price) - newPaidAmount;
+    const newRemainingAmount = Number(order.total_amount) - newPaidAmount;
 
     // Determine new status
     let newStatus = "PARTIAL";
