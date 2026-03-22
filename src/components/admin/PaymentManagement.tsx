@@ -114,17 +114,16 @@ export function PaymentManagement({ allUsers, onRefresh }: PaymentManagementProp
       
       // Use Vercel API (Neon DB) instead of Render backend
       const data = await orderApi.getOrdersFromNeon(filters);
-      setOrders((data.orders || []) as unknown as ApiOrder[]);
+      const ordersList = data.orders || [];
+      setOrders(ordersList as unknown as ApiOrder[]);
 
-      // Calculate stats
-      const allData = await orderApi.getOrdersFromNeon({});
-      const allOrders = (allData.orders || []) as unknown as ApiOrder[];
+      // Calculate stats from orders
       setStats({
-        totalDebt: allOrders.reduce((sum, o) => sum + Number(o.remaining_amount || 0), 0),
-        pendingCount: allOrders.filter(o => o.payment_status === "PENDING").length,
-        partialCount: allOrders.filter(o => o.payment_status === "PARTIAL").length,
-        paidCount: allOrders.filter(o => o.payment_status === "PAID" && o.status !== "cancelled").length,
-        totalOrders: allOrders.length,
+        totalDebt: ordersList.reduce((sum: number, o: any) => sum + Number(o.remaining_amount || 0), 0),
+        pendingCount: ordersList.filter((o: any) => o.payment_status === "PENDING" || !o.payment_status).length,
+        partialCount: ordersList.filter((o: any) => o.payment_status === "PARTIAL").length,
+        paidCount: ordersList.filter((o: any) => o.payment_status === "PAID" && o.status !== "cancelled").length,
+        totalOrders: ordersList.length,
       });
     } catch (error) {
       console.error("Load orders error:", error);
