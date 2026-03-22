@@ -72,8 +72,37 @@ export default function DashboardPage() {
       ]);
       // Handle new API response format
       const ordersData = ordersResponse as any;
-      setUserOrders(ordersData.orders || []);
-      setOrderSummary(ordersData.summary || null);
+      const orders = ordersData.orders || [];
+      setUserOrders(orders);
+      
+      // Calculate summary from orders
+      const today = new Date().toISOString().split('T')[0];
+      const monthStart = today.substring(0, 7) + '-01';
+      
+      const todayOrders = orders.filter((o: any) => {
+        const orderDate = (o.created_at || '').split('T')[0];
+        return orderDate === today;
+      });
+      
+      const monthOrders = orders.filter((o: any) => {
+        const orderDate = o.created_at || '';
+        return orderDate >= monthStart;
+      });
+      
+      const activeOrders = orders.filter((o: any) => o.payment_status !== 'CANCELLED');
+      
+      const summary = {
+        todayOrderCount: todayOrders.length,
+        todayOrderAmount: todayOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0),
+        monthOrderCount: monthOrders.length,
+        monthOrderAmount: monthOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0),
+        totalPaid: activeOrders.reduce((sum: number, o: any) => sum + Number(o.paid_amount || 0), 0),
+        totalDebt: activeOrders.reduce((sum: number, o: any) => sum + Number(o.remaining_amount || 0), 0),
+        totalOrders: orders.length,
+        totalAmount: activeOrders.reduce((sum: number, o: any) => sum + Number(o.total_amount || 0), 0),
+      };
+      
+      setOrderSummary(summary);
       setProducts(productsData.filter((p: Product) => p.status === "ACTIVE") || []);
     } catch (error) {
       console.error("Data load error:", error);
@@ -149,10 +178,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Calculate stats from summary
-  const totalSpent = orderSummary?.totalPaid || userOrders.reduce((sum, o) => sum + (o.total_amount || o.totalAmount || 0), 0);
-  const completedOrders = userOrders.filter(o => o.status === "COMPLETED" || o.status === "completed").length;
-  const pendingOrders = userOrders.filter(o => o.payment_status === "PENDING" || o.status === "PENDING").length;
+  // Stats are now calculated in loadData and stored in orderSummary
 
   if (loading) {
     return (
@@ -236,24 +262,24 @@ export default function DashboardPage() {
 
               <Card className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-[#16A34A]/10 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-[#16A34A]" />
+                  <div className="w-12 h-12 bg-[#3B82F6]/10 rounded-xl flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-[#3B82F6]" />
                   </div>
                   <div>
                     <p className="text-xs text-[#6B7280]">Bu Ay Sifariş</p>
-                    <p className="text-2xl font-bold text-[#1F2937]">{orderSummary?.monthOrderCount || 0}</p>
+                    <p className="text-2xl font-bold text-[#3B82F6]">{orderSummary?.monthOrderCount || 0}</p>
                   </div>
                 </div>
               </Card>
 
               <Card className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-[#3B82F6]/10 rounded-xl flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-[#3B82F6]" />
+                  <div className="w-12 h-12 bg-[#16A34A]/10 rounded-xl flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-[#16A34A]" />
                   </div>
                   <div>
                     <p className="text-xs text-[#6B7280]">Ödənilib</p>
-                    <p className="text-2xl font-bold text-[#16A34A]">{(orderSummary?.totalPaid || totalSpent).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-[#16A34A]">{(orderSummary?.totalPaid || 0).toFixed(2)} AZN</p>
                   </div>
                 </div>
               </Card>
@@ -265,9 +291,33 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs text-[#6B7280]">Qalan Borc</p>
-                    <p className="text-2xl font-bold text-[#EF4444]">{(orderSummary?.totalDebt || 0).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-[#EF4444]">{(orderSummary?.totalDebt || 0).toFixed(2)} AZN</p>
                   </div>
                 </div>
+              </Card>
+            </div>
+
+            {/* Monthly Summary */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
+                <p className="text-xs text-blue-600 font-medium">Bu Gün Sifariş</p>
+                <p className="text-3xl font-bold text-blue-700">{orderSummary?.todayOrderCount || 0}</p>
+                <p className="text-xs text-blue-500 mt-1">{(orderSummary?.todayOrderAmount || 0).toFixed(2)} AZN</p>
+              </Card>
+              
+              <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200">
+                <p className="text-xs text-purple-600 font-medium">Bu Ay Məbləğ</p>
+                <p className="text-3xl font-bold text-purple-700">{(orderSummary?.monthOrderAmount || 0).toFixed(2)} AZN</p>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border border-green-200">
+                <p className="text-xs text-green-600 font-medium">Ümumi Ödəniş</p>
+                <p className="text-3xl font-bold text-green-700">{(orderSummary?.totalPaid || 0).toFixed(2)} AZN</p>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border border-red-200">
+                <p className="text-xs text-red-600 font-medium">Ümumi Borc</p>
+                <p className="text-3xl font-bold text-red-700">{(orderSummary?.totalDebt || 0).toFixed(2)} AZN</p>
               </Card>
             </div>
 
