@@ -6,7 +6,7 @@ import { orderApi, productApi, authApi, type Order, type Product, type OrderSumm
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   LogOut, 
   Package, 
@@ -24,7 +24,10 @@ import {
   Store,
   AlertCircle,
   TrendingUp,
-  Wallet
+  Wallet,
+  CreditCard,
+  Banknote,
+  X
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -36,6 +39,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<"home" | "products" | "orders">("home");
+
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentOrderId, setPaymentOrderId] = useState<number | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   // New order form state
   const [showNewOrder, setShowNewOrder] = useState(false);
@@ -123,6 +132,44 @@ export default function DashboardPage() {
   const handleLogout = () => {
     authApi.logout();
     router.push("/login");
+  };
+
+  // Handle debt payment
+  const handlePayDebt = (orderId: number) => {
+    setPaymentOrderId(orderId);
+    setPaymentAmount("");
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (!paymentOrderId || !paymentAmount) return;
+    
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Düzgün məbləğ daxil edin");
+      return;
+    }
+
+    const order = userOrders.find((o: any) => o.id === paymentOrderId);
+    if (!order) return;
+
+    const remaining = Number(order.remaining_amount || order.remainingAmount || 0);
+    if (amount > remaining) {
+      alert(`Maksimum ${remaining.toFixed(2)} AZN ödəniş edilə bilər`);
+      return;
+    }
+
+    setPaymentProcessing(true);
+    try {
+      await orderApi.addPayment(paymentOrderId, amount, "CASH", "Müştəri ödənişi");
+      alert("Ödəniş uğurla qeydə alındı!");
+      setShowPaymentModal(false);
+      loadData(); // Refresh data
+    } catch (error: any) {
+      alert(error.message || "Ödəniş xətası");
+    } finally {
+      setPaymentProcessing(false);
+    }
   };
 
   const handleCreateOrder = async () => {
@@ -646,14 +693,32 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Payment Info */}
-                    <div className="mt-4 pt-4 border-t border-[#E5E7EB] grid grid-cols-2 gap-4">
-                      <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <p className="text-xs text-[#6B7280]">Ödənilib</p>
-                        <p className="text-lg font-bold text-green-600">{(order.paid_amount || order.paidAmount || 0).toFixed(2)} AZN</p>
-                      </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <p className="text-xs text-[#6B7280]">Qalan</p>
-                        <p className="text-lg font-bold text-red-600">{(order.remaining_amount || order.remainingAmount || 0).toFixed(2)} AZN</p>
+                    <div className="mt-4 pt-4 border-t border-[#E5E7EB]">
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <p className="text-xs text-[#6B7280]">Ödənilib</p>
+                          <p className="text-lg font-bold text-green-600">{(order.paid_amount || order.paidAmount || 0).toFixed(2)} AZN</p>
+                        </div>
+                        <div className="text-center p-3 bg-red-50 rounded-lg">
+                          <p className="text-xs text-[#6B7280]">Qalan</p>
+                          <p className="text-lg font-bold text-red-600">{(order.remaining_amount || order.remainingAmount || 0).toFixed(2)} AZN</p>
+                        </div>
+                        {/* Pay Button */}
+                        {(order.payment_status !== "PAID" && order.payment_status !== "CANCELLED" && Number(order.remaining_amount || order.remainingAmount || 0) > 0) && (
+                          <button
+                            onClick={() => handlePayDebt(order.id)}
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#16A34A] to-[#15803D] text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-green-500/30 transition-all"
+                          >
+                            <DollarSign className="w-5 h-5" />
+                            <span>Ödə</span>
+                          </button>
+                        )}
+                        {order.payment_status === "PAID" && (
+                          <div className="flex items-center justify-center gap-2 p-3 bg-green-100 rounded-lg">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                            <span className="text-sm font-semibold text-green-700">Tam Ödənilib</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -663,6 +728,123 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </main>
+
+      {/* Payment Modal */}
+      <AnimatePresence>
+        {showPaymentModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowPaymentModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl w-full max-w-md p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-[#1F2937]">Ödəniş Et</h3>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {(() => {
+                const order = userOrders.find((o: any) => o.id === paymentOrderId);
+                if (!order) return null;
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Sifariş:</span>
+                        <span className="font-bold text-[#D90429]">#{(order as any).order_number || (order as any).orderNumber}</span>
+                      </div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Ümumi məbləğ:</span>
+                        <span className="font-bold">{(order.total_amount || order.totalAmount || 0).toFixed(2)} AZN</span>
+                      </div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Ödənilib:</span>
+                        <span className="font-semibold text-green-600">{(order.paid_amount || order.paidAmount || 0).toFixed(2)} AZN</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Qalan borc:</span>
+                        <span className="font-bold text-red-600">{(order.remaining_amount || order.remainingAmount || 0).toFixed(2)} AZN</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Ödəniş məbləği (AZN)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D90429]/20 focus:border-[#D90429]"
+                      />
+                    </div>
+
+                    {/* Quick amounts */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {[10, 20, 50].map((amt) => {
+                        const order = userOrders.find((o: any) => o.id === paymentOrderId);
+                        const maxAmt = order ? Number(order.remaining_amount || order.remainingAmount || 0) : 0;
+                        if (amt > maxAmt) return null;
+                        return (
+                          <button
+                            key={amt}
+                            onClick={() => setPaymentAmount(amt.toString())}
+                            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                          >
+                            {amt} AZN
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() => {
+                          const order = userOrders.find((o: any) => o.id === paymentOrderId);
+                          if (order) {
+                            setPaymentAmount((order.remaining_amount || order.remainingAmount || 0).toString());
+                          }
+                        }}
+                        className="px-4 py-2 bg-[#D90429]/10 hover:bg-[#D90429]/20 rounded-lg text-sm font-medium text-[#D90429] transition-colors"
+                      >
+                        Tam Borc
+                      </button>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowPaymentModal(false)}
+                        className="flex-1"
+                      >
+                        Ləğv
+                      </Button>
+                      <Button
+                        onClick={handlePaymentSubmit}
+                        disabled={paymentProcessing || !paymentAmount}
+                        className="flex-1 bg-gradient-to-r from-[#16A34A] to-[#15803D] hover:shadow-lg hover:shadow-green-500/30"
+                        icon={paymentProcessing ? <RefreshCw className="animate-spin w-4 h-4" /> : <DollarSign className="w-4 h-4" />}
+                      >
+                        {paymentProcessing ? "Gözləyin..." : "Ödəniş Et"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
