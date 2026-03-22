@@ -75,8 +75,11 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+      const user = authApi.getCurrentUser();
+      const userId = user?.userId;
+      
       const [ordersResponse, productsData] = await Promise.all([
-        orderApi.getMyOrders(),
+        orderApi.getOrdersFromNeon(userId ? { userId: String(userId) } : {}),
         productApi.getAll(),
       ]);
       // Handle new API response format
