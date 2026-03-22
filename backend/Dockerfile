@@ -9,9 +9,9 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
-# Render üçün portu mütləq qeyd edirik
-ENV PORT=8080
-EXPOSE 8080
+# Portu 10000 olaraq təyin edirik (Render-in standartı budur)
+ENV PORT=10000
+EXPOSE 10000
 
-# Java-ya deyirik ki, məhz bu portu dinləsin
+# Spring Boot-a portu məcburi mənimsədirik
 ENTRYPOINT ["java", "-Dserver.port=${PORT}", "-jar", "app.jar"]
