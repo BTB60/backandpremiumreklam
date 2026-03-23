@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/products")
@@ -29,12 +30,12 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public Product getById(@PathVariable Long id) {
+    public Product getById(@PathVariable UUID id) {
         return productService.getById(id);
     }
 
     @GetMapping("/{id}/price")
-    public BigDecimal getPrice(@PathVariable Long id, @RequestParam(required = false) Long userId) {
+    public BigDecimal getPrice(@PathVariable UUID id, @RequestParam(required = false) UUID userId) {
         if (userId != null) {
             return userPriceService.getPriceForUser(userId, id);
         }
@@ -49,13 +50,13 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Product update(@PathVariable Long id, @RequestBody ProductRequest request) {
+    public Product update(@PathVariable UUID id, @RequestBody ProductRequest request) {
         return productService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable UUID id) {
         productService.delete(id);
         return ResponseEntity.ok().build();
     }
@@ -63,12 +64,12 @@ public class ProductController {
     // User Price Management
     @GetMapping("/user-prices/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<UserPrice> getUserPrices(@PathVariable Long userId) {
+    public List<UserPrice> getUserPrices(@PathVariable UUID userId) {
         return userPriceService.getUserPrices(userId);
     }
 
     @GetMapping("/user-prices/{userId}/product/{productId}")
-    public BigDecimal getUserProductPrice(@PathVariable Long userId, @PathVariable Long productId) {
+    public BigDecimal getUserProductPrice(@PathVariable UUID userId, @PathVariable UUID productId) {
         return userPriceService.getPriceForUser(userId, productId);
     }
 
@@ -80,7 +81,7 @@ public class ProductController {
 
     @DeleteMapping("/user-prices/{userId}/product/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteUserPrice(@PathVariable Long userId, @PathVariable Long productId) {
+    public ResponseEntity<?> deleteUserPrice(@PathVariable UUID userId, @PathVariable UUID productId) {
         userPriceService.deleteUserPrice(userId, productId);
         return ResponseEntity.ok().build();
     }
