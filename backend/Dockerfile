@@ -1,18 +1,14 @@
-# 1. Java mühiti
-FROM eclipse-temurin:17-jdk-alpine
-
-# 2. İşçi qovluğu
+FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 WORKDIR /app
-
-# 3. Faylları kopyala
 COPY . .
+RUN mvn clean package -DskipTests
 
-# 4. Proqramı yığ (Build)
-RUN chmod +x gradlew
-RUN ./gradlew bootJar -x test
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
 
-# 5. Port
+# Render-in verdiyi portu birbaşa mənimsədirik
 EXPOSE 8080
 
-# 6. Proqramı birbaşa işə sal (Ən dəqiq yol)
-ENTRYPOINT ["java", "-jar", "build/libs/premium-reklam-backend-1.0.0.jar"]
+# Parametrləri ENTRYPOINT-də daha dəqiq qeyd edirik
+ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
