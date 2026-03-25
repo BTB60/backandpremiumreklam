@@ -1,0 +1,33 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: premium-reklam-backend
+
+  datasource:
+    url: jdbc:postgresql://ep-falling-king-adhnmw1c-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+    username: neondb_owner
+    password: npg_1ki6wgjrtqlW
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+# JWT Configuration
+app:
+  jwt:
+    secret: QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVoxMjM0NTY3ODkwQUJDREVGRw==
+    expiration: 86400000
+
+# Logging
+logging:
+  level:
+    az.premiumreklam: DEBUG
+    org.springframework.security: DEBUG
