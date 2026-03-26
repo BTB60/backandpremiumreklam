@@ -2,7 +2,6 @@ package az.premiumreklam.controller;
 
 import az.premiumreklam.dto.order.OrderRequest;
 import az.premiumreklam.dto.order.OrderResponse;
-import az.premiumreklam.entity.Order;
 import az.premiumreklam.enums.OrderStatus;
 import az.premiumreklam.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -24,34 +22,29 @@ public class OrderController {
 
     @PostMapping
     public OrderResponse create(@RequestBody OrderRequest request, Authentication authentication) {
-        Order order = orderService.createOrder(request, authentication.getName());
-        return OrderResponse.fromEntity(order);
+        return orderService.createOrderResponse(request, authentication.getName());
     }
 
     @GetMapping
     public List<OrderResponse> getAll(Authentication authentication) {
-        return orderService.getAllOrders().stream()
-                .map(OrderResponse::fromEntity)
-                .collect(Collectors.toList());
+        return orderService.getAllOrdersResponse();
     }
 
     @GetMapping("/my")
     public List<OrderResponse> getMyOrders(Authentication authentication) {
-        return orderService.getOrdersByUsername(authentication.getName()).stream()
-                .map(OrderResponse::fromEntity)
-                .collect(Collectors.toList());
+        return orderService.getOrdersByUsernameResponse(authentication.getName());
     }
 
     @GetMapping("/{id}")
     public OrderResponse getById(@PathVariable UUID id) {
-        return OrderResponse.fromEntity(orderService.getOrderById(id));
+        return orderService.getOrderByIdResponse(id);
     }
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public OrderResponse updateStatus(@PathVariable UUID id, @RequestParam String status) {
         OrderStatus orderStatus = OrderStatus.fromValue(status);
-        return OrderResponse.fromEntity(orderService.updateOrderStatus(id, orderStatus));
+        return orderService.updateOrderStatusResponse(id, orderStatus);
     }
 
     @DeleteMapping("/{id}")

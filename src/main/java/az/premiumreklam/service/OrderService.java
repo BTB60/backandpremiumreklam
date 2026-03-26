@@ -2,6 +2,7 @@
 
 import az.premiumreklam.dto.order.OrderItemRequest;
 import az.premiumreklam.dto.order.OrderRequest;
+import az.premiumreklam.dto.order.OrderResponse;
 import az.premiumreklam.entity.*;
 import az.premiumreklam.enums.OrderStatus;
 import az.premiumreklam.enums.ProductUnit;
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,9 +30,44 @@ public class OrderService {
     private final UserPriceRepository userPriceRepository;
 
     @Transactional
+    public OrderResponse createOrderResponse(OrderRequest request, String username) {
+        Order order = createOrder(request, username);
+        return OrderResponse.fromEntity(order);
+    }
+
+    @Transactional
+    public List<OrderResponse> getAllOrdersResponse() {
+        return orderRepository.findAll().stream()
+                .map(OrderResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<OrderResponse> getOrdersByUsernameResponse(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("İstifadəçi tapılmadı"));
+        return orderRepository.findByUserId(user.getId()).stream()
+                .map(OrderResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public OrderResponse getOrderByIdResponse(UUID id) {
+        Order order = getOrderById(id);
+        return OrderResponse.fromEntity(order);
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatusResponse(UUID id, OrderStatus status) {
+        Order order = updateOrderStatus(id, status);
+        return OrderResponse.fromEntity(order);
+    }
+
+    // Original entity methods (kept for internal use)
+    @Transactional
     public Order createOrder(OrderRequest request, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Ä°stifadÉ™Ã§i tapÄ±lmadÄ±"));
+                .orElseThrow(() -> new RuntimeException("İstifadəçi tapılmadı"));
 
         Order order = Order.builder()
                 .orderNumber(generateOrderNumber())
@@ -56,10 +93,8 @@ public class OrderService {
                 }
 
                 BigDecimal quantity = defaultBigDecimal(itemRequest.getQuantity(), BigDecimal.ONE);
-                // Check for user-specific price first, then product's salePrice, fallback to request price
                 BigDecimal unitPrice = BigDecimal.ZERO;
                 if (product != null) {
-                    // Check if user has custom price for this product
                     var userPriceOpt = userPriceRepository.findByUserIdAndProductIdAndIsActiveTrue(user.getId(), product.getId());
                     if (userPriceOpt.isPresent()) {
                         unitPrice = userPriceOpt.get().getCustomPrice();
