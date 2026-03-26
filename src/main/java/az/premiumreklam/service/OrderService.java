@@ -125,20 +125,22 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
     }
 
+    @Transactional
     public List<Order> getOrdersByUsername(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Ä°stifadÉ™Ã§i tapÄ±lmadÄ±"));
+                .orElseThrow(() -> new RuntimeException("İstifadəçi tapılmadı"));
         return orderRepository.findByUserId(user.getId());
     }
-
+    
+    @Transactional
     public Order getOrderById(UUID id) {
         return orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("SifariÅŸ tapÄ±lmadÄ±"));
+                .orElseThrow(() -> new RuntimeException("Sifariş tapılmadı"));
     }
 
     @Transactional
