@@ -33,13 +33,21 @@ SECURITY_LOG_LEVEL=WARN
 CORS_ORIGINS=*
 ```
 
-### Build Command:
+### Build (əlavə): bu mono-repoda əsas Java build **Gradle**-dir (`backend/gradlew`)
+
+Render/Docker üçün JAR yaratmaq:
 ```bash
-./mvnw clean package -DskipTests
+cd backend
+chmod +x ./gradlew
+./gradlew bootJar --no-daemon -x test
+# JAR: backend/build/libs/premium-reklam-backend-*.jar
+java -jar build/libs/premium-reklam-backend-*.jar
 ```
 
-### Start Command:
+Köhnə Maven sətirləri (bəzi köçürmələrdə `pom.xml` saxlanıla bilər):
 ```bash
+cd backend
+./mvnw clean package -DskipTests
 java -jar target/*.jar
 ```
 
@@ -77,10 +85,10 @@ cd backend
 export DATABASE_URL=postgresql://USER:PASS@HOST/DB?sslmode=require
 export APP_JWT_SECRET=your-secret-key
 
-# Run
+# Run (Gradle — tövsiyə)
+./gradlew bootRun
+# və ya
 ./mvnw spring-boot:run
-# or
-mvn spring-boot:run
 ```
 
 ---
@@ -109,3 +117,53 @@ mvn spring-boot:run
 - delivering
 - completed
 - cancelled
+
+---
+
+## 7. Hostinger KVM VPS (Ubuntu 24.04)
+
+Bu repo kökdə **Next.js**, `backend/` altında **Spring Boot (Gradle)**. Kök `Dockerfile` legacy qeyd üçün saxlanıla bilər; VPS üçün hazır skriptlər: **`deploy/`**.
+
+### 7.1 Firewall
+
+Hostinger panelində bu VPS üçün **inbound** aç: **TCP 22**, **80**, **443**. Sonra öz kompüterindən `ssh root@VPS_IP` yoxlanıla bilər.
+
+### 7.2 Kodu yüklə
+
+```bash
+sudo mkdir -p /opt/premiumreklam
+cd /opt/premiumreklam
+git clone https://github.com/BTB60/backandpremiumreklam.git app-backand
+cd app-backand
+```
+
+(Qeyd: non-root istifadəçi üçün əvvəlcə `sudo chown -R "$USER":"$USER" /opt/premiumreklam` edə bilərsən.)
+
+### 7.3 İlk quraşdırma (Nginx, PostgreSQL, systemd, build)
+
+Repo kökündən (layihə root-u `DEPLOY_SRC` ilə göstərilir):
+
+```bash
+cd /opt/premiumreklam/app-backand
+chmod +x deploy/install-vps.sh deploy/rebuild-app.sh
+sudo env DEPLOY_SRC=/opt/premiumreklam/app-backand bash deploy/install-vps.sh
+```
+
+İlk işləmədə `/etc/premiumreklam/backend.env` yaradılır; nümunə: `deploy/backend.env.example`.  
+`PREMIUM_REKLAM_SRC` dəyişəni də eyni məqsədlə işləyir (köhnə uyğunluq).
+
+### 7.4 SSL (DNS domain VPS IP-də olandan sonra)
+
+```bash
+sudo certbot --nginx -d premiumreklam.shop -d www.premiumreklam.shop
+```
+
+### 7.5 Kod yeniləməsi
+
+```bash
+cd /opt/premiumreklam/app-backand
+git pull origin main
+sudo env DEPLOY_SRC=/opt/premiumreklam/app-backand bash deploy/rebuild-app.sh
+```
+
+Ətraflı: `deploy/README-AZ.txt`.

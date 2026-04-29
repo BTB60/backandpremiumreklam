@@ -32,3 +32,17 @@ SERVER_PORT=8080
 # Logging
 LOG_LEVEL=INFO
 SECURITY_LOG_LEVEL=WARN
+
+
+# ============================================
+# HOSTINGER KVM VPS (local PostgreSQL + systemd)
+# ============================================
+# İlk quraşdırma: deploy/install-vps.sh (DEPLOY_GUIDE.md §7)
+# Fayl nümunəsi: deploy/backend.env.example
+# Prod üçün Spring profil və JDBC:
+#   SPRING_PROFILES_ACTIVE=production
+#   SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:5432/premium_reklam
+#   SPRING_DATASOURCE_USERNAME=...
+#   SPRING_DATASOURCE_PASSWORD=...
+#   JWT_SECRET=...
+# Fayl yolu: /etc/premiumreklam/backend.env
