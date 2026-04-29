@@ -26,3 +26,11 @@ DEPLOY_SRC (və ya PREMIUM_REKLAM_SRC) — layihənin GIT kök qovluğu olmalıd
    sudo env DEPLOY_SRC=/opt/premiumreklam/app-backand bash deploy/rebuild-app.sh
 
 Hostinger firewall: inbound TCP 22, 80, 443.
+
+İki repo (bu repoda backend, Premium-Reklam-da frontend)
+----------------------------------------------------------
+Tam təlimat: deploy/VPS-DUAL-REPO.md
+
+   sudo env BACKEND_SRC=/opt/premiumreklam/backend-src \
+            FRONTEND_SRC=/opt/premiumreklam/frontend-src \
+            bash /opt/premiumreklam/frontend-src/deploy/install-vps.sh

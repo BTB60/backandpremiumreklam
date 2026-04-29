@@ -167,3 +167,20 @@ sudo env DEPLOY_SRC=/opt/premiumreklam/app-backand bash deploy/rebuild-app.sh
 ```
 
 Ətraflı: `deploy/README-AZ.txt`.
+
+### 7.6 İki ayrı repo (bu repo = backend, Premium-Reklam = frontend)
+
+Eyni VPS-də **backend** klonu bu repodan, **frontend** [Premium-Reklam](https://github.com/BTB60/Premium-Reklam)-dan qurulanda tam addımlar:
+
+**[deploy/VPS-DUAL-REPO.md](deploy/VPS-DUAL-REPO.md)**
+
+Qısa nümunə (skriptlər Premium-Reklam klonundakı `deploy/` ilə də işləyir):
+
+```bash
+sudo env \
+  BACKEND_SRC=/opt/premiumreklam/backend-src \
+  FRONTEND_SRC=/opt/premiumreklam/frontend-src \
+  bash /opt/premiumreklam/frontend-src/deploy/install-vps.sh
+```
+
+Yeniləmə: eyni `BACKEND_SRC` / `FRONTEND_SRC` ilə `deploy/rebuild-app.sh`.
