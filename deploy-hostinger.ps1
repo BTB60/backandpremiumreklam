@@ -34,9 +34,9 @@ sudo apt update && sudo apt upgrade -y
 echo '[2/10] Installing essential packages...'
 sudo apt install -y git curl build-essential nginx certbot python3-certbot-nginx
 
-# 3. Node.js 18
-echo '[3/10] Installing Node.js 18 LTS...'
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# 3. Node.js 20
+echo '[3/10] Installing Node.js 20 LTS...'
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # 4. PM2
@@ -139,7 +139,7 @@ echo 'Check logs: pm2 logs premium-frontend --lines 100'
   $commands = @(
     @("1. Sistemi Yenilə", "sudo apt update && sudo apt upgrade -y"),
     @("2. Əsas Paketlər", "sudo apt install -y git curl build-essential nginx certbot python3-certbot-nginx"),
-    @("3. Node.js 18", "curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && sudo apt-get install -y nodejs"),
+    @("3. Node.js 20", "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs"),
     @("4. PM2", "sudo npm install -g pm2"),
     @("5. Repo Klonla", "mkdir -p /home/premiumreklam/apps && cd /home/premiumreklam/apps && git clone https://github.com/BTB60/backandpremiumreklam.git && cd backandpremiumreklam"),
     @("6. .env Hazırla", "cp deploy/frontend.env.example .env.production && nano .env.production"),

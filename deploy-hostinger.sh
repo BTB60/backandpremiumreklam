@@ -30,9 +30,9 @@ sudo apt upgrade -y
 echo -e "${YELLOW}[2/10] Əsas paketlər qurulur...${NC}"
 sudo apt install -y git curl build-essential nginx certbot python3-certbot-nginx
 
-# Addım 3: Node.js
-echo -e "${YELLOW}[3/10] Node.js 18 LTS qurulur...${NC}"
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Addım 3: Node.js 20 LTS
+echo -e "${YELLOW}[3/10] Node.js 20 LTS qurulur...${NC}"
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Addım 4: PM2

@@ -40,8 +40,8 @@ sudo apt install -y git curl build-essential nginx certbot python3-certbot-nginx
 Tamamlandıqdan sonra:
 
 ```bash
-# 3. Node.js 18 LTS
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# 3. Node.js 20 LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 node -v
 ```
